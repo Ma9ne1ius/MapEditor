@@ -29,32 +29,21 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Map Editor")
         self.setGeometry(0,0,1920,1020)
-        size = 2**16
-        self.scene = QGraphicsScene(-size*0.5,-size*0.5,size,size,self)
-        # self.layer_manager = LayerManager()
+        self.size = 2**14.5
+        self.offset = -10
+        self.scene = QGraphicsScene(self.offset, self.offset, self.size, self.size, self)
         
         self.data_manager = DataManager(self.scene)
-        
-        # self.points = self.data_manager.points
-        # self.provinces = self.data_manager.provinces
-        # self.background = self.data_manager.background_tiles
-        
-        self.view = InteractiveGraphicsView(self.scene, self.data_manager)
+                
+        self.view = InteractiveGraphicsView(self.scene, self.data_manager, abs(self.offset), self.size)
+        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.init_ui()
 
     def init_ui(self):
         central_widget = QWidget()
         layout = QVBoxLayout()
         layout.addWidget(self.view)
-
-        # layers = self.layer_manager.get_layers()
-        # Layer visibility toggles
-        # for layer in layers:
-        #     checkbox = QCheckBox(f"Show {layer}")
-        #     checkbox.setChecked(True)
-        #     checkbox.stateChanged.connect(lambda state, l=layer: self.layer_manager.toggle_visibility(l, state == Qt.Checked))
-        #     layout.addWidget(checkbox)
-
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
@@ -63,5 +52,6 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
+    print(type(window.init_ui))
     window.showMaximized()
     sys.exit(app.exec_())
