@@ -1,6 +1,9 @@
 import numpy as np
 import math
-from  PyQt5.QtWidgets import QGraphicsPolygonItem, QGraphicsView, QGraphicsPixmapItem, QRubberBand, QUndoStack, QGraphicsItem, QGraphicsScene, QGraphicsLineItem
+import collections
+from shapely.geometry import Polygon, MultiPolygon
+from shapely.ops import unary_union
+from PyQt5.QtWidgets import QGraphicsPolygonItem, QGraphicsView, QGraphicsPixmapItem, QRubberBand, QUndoStack, QGraphicsItem, QGraphicsScene, QGraphicsLineItem
 from PyQt5.QtGui import QPolygonF, QPen, QBrush, QColor, QPolygon
 from PyQt5.QtCore import Qt, QPoint, QPointF, QRectF, QRect, QSize, pyqtSignal, QTimer
 from data_manager import DataManager
@@ -13,7 +16,6 @@ class InteractiveGraphicsView(QGraphicsView):
 
     def __init__(self, scene: QGraphicsScene, dataManager: DataManager, offset: int, size: int):
         super().__init__(scene)
-        self.scene = scene
         self.dataManager = dataManager
         self.sceneOffset = offset
         self.sceneSize = size
@@ -27,7 +29,7 @@ class InteractiveGraphicsView(QGraphicsView):
         self._cp_item = QGraphicsPolygonItem(self._current_province)
         self._cp_item.setBrush(QBrush(QColor(150,0,150,100)))
         self._cp_item.setPen(QPen(QColor(150,0,150, 50)))
-        self.scene.addItem(self._cp_item)
+        self.scene().addItem(self._cp_item)
         
         # self._current_province.
         self.setRenderHints(self.renderHints())
@@ -51,12 +53,12 @@ class InteractiveGraphicsView(QGraphicsView):
         self.circle_item.setPen(QPen(QColor(0, 255, 0, 150), self.circle_width, Qt.DashLine))
         self.circle_item.setBrush(QBrush(QColor(0,0,0,0)))
         self.circle_item.setVisible(False)
-        self.scene.addItem(self.circle_item)  # Добавляем круг на сцену
+        self.scene().addItem(self.circle_item)  # Добавляем круг на сцену
         
         self.closest_point_line = QGraphicsLineItem()
         self.closest_point_line.setPen(QPen(QColor(0, 0, 100, 150), self.circle_width))
         self.closest_point_line.setVisible(False)
-        self.scene.addItem(self.closest_point_line)
+        self.scene().addItem(self.closest_point_line)
         
         self.cursorMove.connect(self.updateCircle)
         self.timer = QTimer(self)
@@ -83,7 +85,7 @@ class InteractiveGraphicsView(QGraphicsView):
         self.dataManager.scene.addItem(item)
         
     def deleteProvince(self, province:QGraphicsPolygonItem):
-        self.scene.removeItem(province)
+        self.scene().removeItem(province)
         # self.dataManager.provinces.remove(province)
 
     def addPoint(self, position):
@@ -105,12 +107,12 @@ class InteractiveGraphicsView(QGraphicsView):
     def selectingRect(self, rect: QRect, saveSelection: bool): 
         condition = lambda item: QPolygon(rect, False).intersects(item.polygon().toPolygon()) or (item.isSelected() and saveSelection)
         list(map(lambda item: item.setSelected(condition(item)),
-                filter(lambda item: isinstance(item, QGraphicsPolygonItem) and condition, self.scene.items())))
+                filter(lambda item: isinstance(item, QGraphicsPolygonItem) and condition, self.scene().items())))
 
     def selectPolygon(self, polygon: QPolygonF, saveSelection: bool):
         condition = lambda item: polygon.intersects(item.polygon()) or (item.isSelected() and saveSelection)
         list(map(lambda item: item.setSelected(condition(item)), 
-                filter(lambda item: isinstance(item, QGraphicsPolygonItem) and condition, self.scene.items())))
+                filter(lambda item: isinstance(item, QGraphicsPolygonItem) and condition, self.scene().items())))
     
     def clearSelection(self):
         self.dataManager.scene.clearSelection()
@@ -136,7 +138,7 @@ class InteractiveGraphicsView(QGraphicsView):
         self.closest_point = None
         min_distance = radius
         
-        for item in filter(lambda item: isinstance(item,QGraphicsPolygonItem) and not (item is self.circle_item or item is self._cp_item), self.scene.items(circle_polygon)):
+        for item in filter(lambda item: isinstance(item,QGraphicsPolygonItem) and not (item is self.circle_item or item is self._cp_item), self.scene().items(circle_polygon)):
             polygon = item.polygon()
             for point in filter(lambda point: circle_polygon.containsPoint(point, 1) ,polygon):
                 distance = math.hypot(scene_pos.x() - point.x(), scene_pos.y() - point.y())
@@ -150,6 +152,40 @@ class InteractiveGraphicsView(QGraphicsView):
             # self.closest_point = self.closest_point
         else:
             self.closest_point_line.setVisible(False) if self.closest_point_line.isVisible() else None
+        
+    
+    def unitingProvinces(self):
+        selectedItems = self.scene().selectedItems()
+
+        if len(selectedItems) < 2:
+            return  # Нечего объединять, если выбрано меньше двух элементов
+
+        # Преобразуем QPolygonF в Shapely Polygon
+        def to_shapely_polygon(qpolygonf:QPolygonF):
+            points = [(point.x(), point.y()) for point in qpolygonf]
+            return Polygon(points)
+
+        # Преобразуем Shapely Polygon обратно в QPolygonF
+        def from_shapely_polygon(polygon:Polygon):
+            if polygon.is_empty:
+                return QPolygonF()
+            return QPolygonF([QPointF(x, y) for x, y in polygon.exterior.coords])
+
+        # Используем map для преобразования всех выбранных элементов в Shapely Polygon
+        shapely_polygons = map(lambda item: to_shapely_polygon(item.polygon()), selectedItems)
+
+        # Объединяем все полигоны с использованием unary_union для повышения производительности
+        unified_polygon = unary_union(list(shapely_polygons))
+        # Если результат - несколько полигонов, берем только основные части
+        if isinstance(unified_polygon, MultiPolygon):
+            unified_polygon = max(unified_polygon, key=lambda p: p.area)  # Выбираем самый большой
+
+        # Создаем новый QGraphicsPolygonItem
+        new_polygon_qt = from_shapely_polygon(unified_polygon)
+        new_poly_item = QGraphicsPolygonItem(new_polygon_qt)
+        new_poly_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.scene().addItem(new_poly_item)
+                
 
     def keyPressEvent(self, event):
         """Handle keyboard events for translation and zoom."""
@@ -195,20 +231,24 @@ class InteractiveGraphicsView(QGraphicsView):
                 self.circle_item.setVisible(self.isConnectCircleVisible)
                 self.closest_point_line.setVisible(self.isConnectCircleVisible)
                 self.checkCursor()
+            case Qt.Key_F5:
+                self.isF5Pressed = not self.isF5Pressed
+            case Qt.Key_F6:
+                self.unitingProvinces()
             case Qt.Key_1:
-                list(map(lambda item: item.setVisible(not self.isBackVisible), filter(lambda item: isinstance(item, QGraphicsPixmapItem), self.scene.items())))
+                list(map(lambda item: item.setVisible(not self.isBackVisible), filter(lambda item: isinstance(item, QGraphicsPixmapItem), self.scene().items())))
                 self.repaint()
                 self.isBackVisible = not self.isBackVisible
             case Qt.Key_2:
-                list(map(self.redrawPolygonEdge, filter(lambda item: isinstance(item,QGraphicsPolygonItem) and not (item is self._cp_item or item is self.circle_item), self.scene.items())))
+                list(map(self.redrawPolygonEdge, filter(lambda item: isinstance(item,QGraphicsPolygonItem) and not (item is self._cp_item or item is self.circle_item), self.scene().items())))
                 self.repaint()
                 self.isPolygonEdgeVisible = not self.isPolygonEdgeVisible
             case Qt.Key_3:
-                list(map(self.redrawPolygonBody, filter(lambda item: isinstance(item,QGraphicsPolygonItem) and not (item is self._cp_item or item is self.circle_item), self.scene.items())))
+                list(map(self.redrawPolygonBody, filter(lambda item: isinstance(item,QGraphicsPolygonItem) and not (item is self._cp_item or item is self.circle_item), self.scene().items())))
                 self.repaint()
                 self.isPolygonBodyVisible = not self.isPolygonBodyVisible
             case Qt.Key_Delete:
-                list(map(lambda item:self.deleteProvince(item), self.scene.selectedItems()))
+                list(map(lambda item:self.deleteProvince(item), self.scene().selectedItems()))
                 self.repaint()
             case Qt.Key_Backspace:
                 self.popPoint()
@@ -224,13 +264,13 @@ class InteractiveGraphicsView(QGraphicsView):
             #         self.undoStack.redo()
             case Qt.Key_Home:
                 self.timer.timeout.disconnect()
-                self.scene.removeItem(self.cp_item)
-                self.scene.removeItem(self.circle_item)
+                self.scene().removeItem(self.cp_item)
+                self.scene().removeItem(self.circle_item)
                 # if event.modifiers() & Qt.ControlModifier:
                 self.dataManager.save_jsons()
                 self.timer.timeout.connect(self.checkCursor)
-                self.scene.addItem(self.cp_item)
-                self.scene.addItem(self.circle_item)
+                self.scene().addItem(self.cp_item)
+                self.scene().addItem(self.circle_item)
             case Qt.Key_PageUp:
                 self.dataManager.load_background(self.dataManager.pixoffset)
                 self.dataManager.import_data(self.dataManager.pixoffset)
@@ -254,7 +294,7 @@ class InteractiveGraphicsView(QGraphicsView):
         elif button == Qt.LeftButton and not self.origin.isNull():
             self.setCursor(Qt.CursorShape.CrossCursor)
             self.rubberBand.setGeometry(QRect(self.origin, event.pos()).normalized())
-        elif self.is_circle_mode:
+        elif self.isConnectCircleVisible:
             self.updateCircle(event.pos())
         
         self.old_x = x
@@ -277,17 +317,16 @@ class InteractiveGraphicsView(QGraphicsView):
             if self.isConnectCircleVisible:
                 pos = self.closest_point
                 self.addPoint(pos) 
-            elif not self.isPolygonBodyVisible:
+            elif not self.isF5Pressed:
                 pos = self.mapToScene(event.pos()).toPoint()
                 self.addPoint(pos) 
-            else:
-                pos: QPoint = event.pos()
-                if not self.isSaveSelecting:
-                    self.clearSelection()
-                # item = self.itemAt(self.mapToScene(pos).toPoint())
-                item = self.itemAt(pos)
-                if not item is None:
-                    item.setSelected(True)
+            pos: QPoint = event.pos()
+            if not self.isSaveSelecting:
+                self.clearSelection()
+            # item = self.itemAt(self.mapToScene(pos).toPoint())
+            item = self.itemAt(pos)
+            if not item is None:
+                item.setSelected(not item.isSelected())
 
         # super().mouseDoubleClickEvent(event)
 
