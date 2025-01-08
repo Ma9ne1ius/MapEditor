@@ -3,12 +3,13 @@ import math
 import collections
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
+from data_manager import DataManager
+import random as r
+from command_manager import AddPointCommand, PopPointCommand, AddCurrentPolygonCommand, AddPolygonCommand, DeletePolygonCommand
+
 from PyQt5.QtWidgets import QGraphicsPolygonItem, QGraphicsView, QGraphicsPixmapItem, QRubberBand, QUndoStack, QGraphicsItem, QGraphicsScene, QGraphicsLineItem
 from PyQt5.QtGui import QPolygonF, QPen, QBrush, QColor, QPolygon
 from PyQt5.QtCore import Qt, QPoint, QPointF, QRectF, QRect, QSize, pyqtSignal, QTimer
-from data_manager import DataManager
-import random as r
-
 
 
 class InteractiveGraphicsView(QGraphicsView):
@@ -19,7 +20,7 @@ class InteractiveGraphicsView(QGraphicsView):
         self.dataManager = dataManager
         self.sceneOffset = offset
         self.sceneSize = size
-        # self.undoStack = QUndoStack(self)
+        self.undoStack = QUndoStack(self)
         # self.polygon_item = polygon_item
         
         self.rubberBand: QRubberBand = QRubberBand(QRubberBand.Rectangle, self)
@@ -64,7 +65,6 @@ class InteractiveGraphicsView(QGraphicsView):
         self.timer = QTimer(self)
         self.timer.setInterval(15)
         self.timer.timeout.connect(self.checkCursor)
-        # self.timer.timeout.connect(self.updateCircle)
         self.timer.start()
         self._cursorPos = self.cursor().pos()
 
@@ -74,34 +74,27 @@ class InteractiveGraphicsView(QGraphicsView):
             self._cursorPos = pos
             self.cursorMove.emit(pos)
 
-    def add_province_polygon(self):
+    def add_province_polygon(self, polygon: QPolygonF):
         """Update the polygon for the current province."""
-        polygon = QPolygonF(self.current_province)
-        self.current_province.clear()
-        item = QGraphicsPolygonItem(polygon)
-        item.setFlag(QGraphicsItem.ItemIsSelectable,True)
-        item.setPen(QPen(Qt.red))
-        item.setBrush(self.QRColor)
-        self.dataManager.scene.addItem(item)
-        
+        self.undoStack.push(AddCurrentPolygonCommand(self))
+        # polygon.clear()
+        # self._cp_item.setPolygon(polygon)
+        # item = QGraphicsPolygonItem(polygon)
+        # item.setFlag(QGraphicsItem.ItemIsSelectable,True)
+        # item.setPen(QPen(Qt.red))
+        # item.setBrush(self.QRColor())
+        # self.dataManager.scene.addItem(item)
+
     def deleteProvince(self, province:QGraphicsPolygonItem):
-        self.scene().removeItem(province)
-        # self.dataManager.provinces.remove(province)
+        self.undoStack.push(DeletePolygonCommand(self, province))
+        # self.scene().removeItem(province)
 
     def addPoint(self, position):
         """Add a point to the current province."""
-        # position = self.mapToScene(position)
-        self.current_province.append(position)
-        self._cp_item.setPolygon(self.current_province)
-        self.repaint()
+        self.undoStack.push(AddPointCommand(self, position))
         
     def popPoint(self):
-        if not self.current_province.isEmpty():
-            index = self.current_province.count()-1
-            self.current_province.remove(index)
-            self._cp_item.setPolygon(self.current_province)
-        self.repaint()
-
+        self.undoStack.push(PopPointCommand(self,))
         # QGraphicsItem().setFlag(Qt.)
     
     def selectingRect(self, rect: QRect, saveSelection: bool): 
@@ -116,7 +109,7 @@ class InteractiveGraphicsView(QGraphicsView):
     
     def clearSelection(self):
         self.dataManager.scene.clearSelection()
-        
+
     def updateCircle(self, position):
         if not self.isConnectCircleVisible: return
         scene_pos = position + (QPoint(-10,-30) / self.scaleFactor)
@@ -152,8 +145,7 @@ class InteractiveGraphicsView(QGraphicsView):
             # self.closest_point = self.closest_point
         else:
             self.closest_point_line.setVisible(False) if self.closest_point_line.isVisible() else None
-        
-    
+
     def unitingProvinces(self):
         selectedItems = self.scene().selectedItems()
 
@@ -183,9 +175,9 @@ class InteractiveGraphicsView(QGraphicsView):
         # Создаем новый QGraphicsPolygonItem
         new_polygon_qt = from_shapely_polygon(unified_polygon)
         new_poly_item = QGraphicsPolygonItem(new_polygon_qt)
-        new_poly_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.scene().addItem(new_poly_item)
-                
+        
+        list(map(lambda item: self.deleteProvince(item), selectedItems))
+        self.undoStack.push(AddPolygonCommand(self, new_poly_item))
 
     def keyPressEvent(self, event):
         """Handle keyboard events for translation and zoom."""
@@ -215,6 +207,8 @@ class InteractiveGraphicsView(QGraphicsView):
                 if self.circle_radius>0:
                     self.circle_radius-=1
                     self.updateCircle(self._cursorPos)
+            case Qt.Key_multiply:
+                print("undo")
             case Qt.Key_F1:
                 self.isSaveSelecting = not self.isSaveSelecting
             case Qt.Key_F2:
@@ -253,16 +247,16 @@ class InteractiveGraphicsView(QGraphicsView):
             case Qt.Key_Backspace:
                 self.popPoint()
             case Qt.Key_Space:
-                self.add_province_polygon()
-                self.current_province.clear()
-                self._cp_item.setPolygon(self.current_province)
-            # case Qt.Key_Z:
-            #     if event.modifiers() & Qt.ControlModifier:
-            #         self.undoStack.undo()
-            # case Qt.Key_Y:
-            #     if event.modifiers() & Qt.ControlModifier:
-            #         self.undoStack.redo()
-            case Qt.Key_Home:
+                self.add_province_polygon(self.current_province)
+            case Qt.Key_Z:
+                if event.modifiers() & Qt.ControlModifier:
+                    # print("undo")
+                    self.undoStack.undo()
+            case Qt.Key_Y:
+                if event.modifiers() & Qt.ControlModifier:
+                    # print("redo")
+                    self.undoStack.redo()
+            case Qt.Key_End:
                 self.timer.timeout.disconnect()
                 self.scene().removeItem(self.cp_item)
                 self.scene().removeItem(self.circle_item)
@@ -271,7 +265,7 @@ class InteractiveGraphicsView(QGraphicsView):
                 self.timer.timeout.connect(self.checkCursor)
                 self.scene().addItem(self.cp_item)
                 self.scene().addItem(self.circle_item)
-            case Qt.Key_PageUp:
+            case Qt.Key_Home:
                 self.dataManager.load_background(self.dataManager.pixoffset)
                 self.dataManager.import_data(self.dataManager.pixoffset)
             case _:
@@ -317,7 +311,7 @@ class InteractiveGraphicsView(QGraphicsView):
             if self.isConnectCircleVisible:
                 pos = self.closest_point
                 self.addPoint(pos) 
-            elif not self.isF5Pressed:
+            elif self.isF5Pressed:
                 pos = self.mapToScene(event.pos()).toPoint()
                 self.addPoint(pos) 
             pos: QPoint = event.pos()
@@ -367,7 +361,7 @@ class InteractiveGraphicsView(QGraphicsView):
                 if self.isPolygonBodyVisible:
                     item.setBrush(QBrush(QColor(0,0,0,0)))
                 else:
-                    item.setBrush(QBrush(self.QRColor))
+                    item.setBrush(QBrush(self.QRColor()))
     
     @property
     def current_province(self):
@@ -408,7 +402,6 @@ class InteractiveGraphicsView(QGraphicsView):
         ]
         return QPolygonF(points)
     
-    @property
     def QRColor(self):
         """The QRColor property."""
         return QColor(r.randint(20,255), r.randint(20,255), r.randint(20,255), 70)
