@@ -196,19 +196,17 @@ class InteractiveGraphicsView(QGraphicsView):
             case Qt.Key_Equal:
                 if self.translation_step < 250:
                     self.translation_step+=1
-            case Qt.Key_Underscore:
+            case Qt.Key_Minus:
                 if self.translation_step > 10:
                     self.translation_step-=1
             case Qt.Key_Plus:
                 if self.circle_radius<150:
                     self.circle_radius+=1
                     self.updateCircle(self._cursorPos)
-            case Qt.Key_Minus:
+            case Qt.Key_Underscore:
                 if self.circle_radius>0:
                     self.circle_radius-=1
                     self.updateCircle(self._cursorPos)
-            case Qt.Key_multiply:
-                print("undo")
             case Qt.Key_F1:
                 self.isSaveSelecting = not self.isSaveSelecting
             case Qt.Key_F2:
