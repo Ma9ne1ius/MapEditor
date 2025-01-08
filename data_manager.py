@@ -115,8 +115,7 @@ class DataManager:
     @staticmethod
     def import_data(pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
-        folder_path = "F:\Program Files\Steam\steamapps\common\Age of History 3\mods\AOW\map\AOW 2\data\ProvincePoints"
-        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
+        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
             return []
@@ -137,8 +136,7 @@ class DataManager:
     def load_background(pixoffset: int):
         """Обработчик загрузки фона."""
         
-        folder_path = "F:\Program Files\Steam\steamapps\common\Age of History 3\mods\AOW\map\AOW 2\\background\main"
-        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
+        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
             return []
