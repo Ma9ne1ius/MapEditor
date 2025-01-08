@@ -61,6 +61,7 @@ Use “-” and “=” to change the speed (step) of moving on the map.
 
 Use “_” and “+” to adjust the distance of points anchoring.
 
+
 (Ru)
 Управление:
 
