@@ -9,20 +9,6 @@ import PyQt5.QtCore
 
 from controller import InteractiveGraphicsView
 from data_manager import DataManager
-# from map_view import MapService
-
-# def tpe (max_workers: int | None = 1):
-#     if max_workers == 0:
-#         max_workers = 1
-#     elif max_workers < 0:
-#         max_workers = abs(max_workers)
-#     def in_thread(func):
-#         def args(*args, **kwargs):
-#             with ThreadPoolExecutor(max_workers,f"{max_workers}; {func}; {args};") as exe:
-#                 exe.submit(func, args, kwargs)
-#         return args
-#     return in_thread
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -52,6 +38,5 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
-    print(type(window.init_ui))
     window.showMaximized()
     sys.exit(app.exec_())

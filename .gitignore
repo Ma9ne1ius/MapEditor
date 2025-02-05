@@ -15,6 +15,7 @@ lib/
 # Sphinx documentation
 docs/_build/
 
+fordev.txt
 prov/
 .codegpt
 .vscode
