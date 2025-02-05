@@ -134,7 +134,7 @@ class MovePointCommand(QUndoCommand):
 
             item.update()
 
-    def moveCurrentPoint(self, toPoint: QPoint|QPointF):
+    def moveCurrentPoint(self):
         for data in self.dataItems:
             polygon = QPolygonFS(data['original_polygon'])
             for point in polygon:
