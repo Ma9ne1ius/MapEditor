@@ -4,10 +4,15 @@ import os, re, orjson
 import numpy as np
 import typing
 import random as r
+import traceback
 from pathlib import Path
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsPolygonItem, QFileDialog, QMessageBox, QGraphicsEllipseItem, QGraphicsView
-from PyQt5.QtGui import QColor, QPixmap, QPen, QBrush, QPolygonF
-from PyQt5.QtCore import Qt, QPointF, QPoint, pyqtSignal, QObject
+from PyQt5.QtGui import QColor, QPixmap, QPen, QBrush, QPolygon, QPolygonF
+from PyQt5.QtCore import Qt, QPointF, QPoint, pyqtSignal, QObject, QRectF, QRect
+# from data_manager import QPolygonFS
+# from data_manager import QPolygonFS
+# from data_manager import QPolygonFS
+
 # from undo_mabager 
 
 
@@ -70,8 +75,8 @@ class DataManager:
                     # provinces = np.append(provinces, poly_item)
                     provinces.append(poly_item)
             except Exception as e:
-                errors.append(f"{file}: {e}")
-        print(errors)
+                errors.append(traceback.format_exc())
+        print(errors[0]) if errors else None
         return provinces, points, pointsSet
         
     @staticmethod
@@ -93,11 +98,9 @@ class DataManager:
     @staticmethod
     def create_polygon_item(province: dict, pixoffset: int):
         points = DataManager.read_points(province, pixoffset)
-        polygon = QPolygonF(points)
-        item:QGraphicsPolygonItem = QGraphicsPolygonItem(polygon)
-        item.setPen(QPen(Qt.red))
-        item.setFlag(QGraphicsItem.ItemIsSelectable,True)
-        item.setBrush(QBrush(QColor(r.randint(100,255), r.randint(100,255), r.randint(100,255), 75)))
+        polygon = QPolygonFS(points)
+        item:ProvenceItem = ProvenceItem(polygon)
+        # item.setZValue(1)
         return item
         # return {"points":points, "province":item}
     
@@ -115,7 +118,14 @@ class DataManager:
     @staticmethod
     def import_data(pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
+        
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        #     res: str = f.read()
+        #     res = res.split("\n")[1]
+
+        # folder_path = res
         folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
+
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
             return []
@@ -128,14 +138,17 @@ class DataManager:
         except FileNotFoundError as e:
             QMessageBox.warning(None, "Ошибка", str(e))
         except Exception as e:
-            QMessageBox.critical(None, "Критическая ошибка", f"Не удалось загрузить данные: {e}")
+            QMessageBox.critical(None, "Критическая ошибка", f"Не удалось загрузить данные: {traceback.format_exc()}")
         return[]
 
     # @tpe(15) 
     @staticmethod
     def load_background(pixoffset: int):
         """Обработчик загрузки фона."""
-        
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        #     res: str = f.read()
+        #     res = res.split("\n")[0]
+        # folder_path = res
         folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
@@ -156,6 +169,7 @@ class DataManager:
                     wX, wY = float(pixmap.width()) * x + pixoffset, float(pixmap.height()) * y + pixoffset
                     tile: QGraphicsPixmapItem = QGraphicsPixmapItem(pixmap)
                     tile.setOffset(wX, wY)
+                    tile.setZValue(-1)
                     # background_tiles = np.append(background_tiles, tile)
                     background_tiles.append(tile)
 
@@ -164,12 +178,13 @@ class DataManager:
             except FileNotFoundError as e:
                 QMessageBox.warning(None, "Ошибка", str(e))
             except Exception as e:
-                QMessageBox.critical(None, "Критическая ошибка", f"Не удалось загрузить фон: {e}")
+                QMessageBox.critical(None, "Критическая ошибка", f"Не удалось загрузить фон: {traceback.format_exc()}")
         
         return background_tiles
 
     def save_jsons(self):
         """Обработчик сохранения JSON-файлов."""
+        
         folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку для JSON-файлалов")
         
         if not folder_path:
@@ -178,8 +193,8 @@ class DataManager:
         try:
             self.exportProviense(folder_path, self.pixoffset)
         except Exception as e:
-            # QMessageBox.critical(None, "Критическая ошибка", f"Не удалось загрузить данные: {e}")
-            raise e
+            QMessageBox.critical(None, "Критическая ошибка", f"Не удалось загрузить данные: {traceback.format_exc()}")
+            # raise e
     
     def exportProviense(self, floder_path: str, pixoffset: int):
         provinces = [
@@ -187,7 +202,7 @@ class DataManager:
                         "pX": [point.x() - pixoffset for point in item.polygon()],
                         "pY": [point.y() - pixoffset for point in item.polygon()]
                     }
-                    for item in filter(lambda item: isinstance(item, QGraphicsPolygonItem), self.scene.items())
+                    for item in filter(lambda item: isinstance(item, ProvenceItem), self.scene.items())
                     ]
         if not provinces:
             return
@@ -229,70 +244,61 @@ class QPointFH(QPointF):
     def __eq__(self, other):
         return self.x() == other.x() and self.y() == other.y()
 
-    
-class PolyItem(QGraphicsPolygonItem):
-    """docstring for PolyItem."""
-    def __init__(self, parent:QGraphicsItem| None = None):
-        super(PolyItem, self).__init__(parent)
-        self._pen = QPen(Qt.NoPen)
-        self.penColor = self._pen().color()
-        self.penRgb = self.penColor.getRgbF()
-        self.penA = self.penColor.alphaF()
-        self._brush = QBrush(Qt.NoBrush)
-        self.brushColor = self._brush().color()
-        self.setAcceptHoverEvents(True)
-    def __init__(self, polygon, parent:QGraphicsItem | None = None):
-        super(PolyItem, self).__init__(polygon, parent)
-    
-    @property
-    def pen(self):
-        """The pen property."""
-        return self._pen
-    @pen.setter
-    def pen(self, value: QPen):
-        self._pen = value
-    
-    @property
-    def brush(self):
-        """The brush property."""
-        return self._brush
-    @brush.setter
-    def brush(self, value: QBrush):
-        self._brush = value
+class QPolygonFS(QPolygonF):
+    """MapEditor.QPolygonF"""
 
-    @property
-    def brushcolor(self):
-        """The brushcolor property."""
-        return self._brush.color()
+    def __init__(self, a=None):
+        if a is None:
+            super().__init__()
+        elif isinstance(a, QPolygonF):
+            super().__init__(a)
+        elif isinstance(a, typing.Iterable):
+            super().__init__(a)
+        elif isinstance(a, QRectF):
+            super().__init__(a)
+        elif isinstance(a, QPolygon):
+            super().__init__(a)
+        else:
+            raise TypeError("Invalid argument type for QPolygonFS")
+
+    def __repr__(self):
+        return f"QPolygonFS({[f'{point.x(), point.y()}' for point in self]})"
+
     
-    @brushcolor.setter
-    def brushcolor(self, value:QColor):
-        self._brush.setColor(value)
-        return self._brush.color()
+class ProvenceItem(QGraphicsPolygonItem):
+    """docstring for ProvenceItem."""
+    
+    def __init__(self, a:QPolygon|QPolygonF|QPolygonFS=None, parent:QGraphicsItem=None):
+        if a is None:
+            super().__init__(parent)
+        elif isinstance(a, QPolygonF|QPolygon|QPolygonFS):
+            super().__init__(a, parent)
+        else:
+            raise TypeError("Invalid argument type for ProvenceItem")
+        self.setPen(QPen(Qt.red))
+        self.setFlag(QGraphicsItem.ItemIsSelectable,True)
+        self.setBrush(QBrush(QColor(r.randint(100,255), r.randint(100,255), r.randint(100,255), 75)))
         
+            
+    def __repr__(self):
+        return f"ProvenceItem({self.Polygon.__repr__()})"
     
-    def hoverEnterEvent(self, event):
-        self.old = now = self.brushcolor
-        r, g, b = now.getRgbF()
-        a = now.alphaF()
-        min, max = 50, 255
-        while(self.isUnderMouse):
-            while(a < max):
-                self.brushcolor(QColor(r, g, b, a+20.0))
-            while(a > min):
-                self.brushcolor(QColor(r, g, b, a-20.0))
-        # super().hoverEnterEvent(event)
-    def hoverLeaveEvent(self, event):
-        self.brushcolor = self.old
-        # super().hoverLeaveEvent(event)
+    @property
+    def Polygon(self):
+        """The polygon property."""
+        return QPolygonFS(self.polygon())
+    @Polygon.setter
+    def Polygon(self, value: QPolygonF | QPolygon | QPolygonFS):
+        self.setPolygon(value)    
 
-
-class ValueThread(QObject):
+    
+    
+class valuethread(QObject):
     """Потокобезопасный хранитель значения с сигналом PyQt для обновлений."""
     
     _signal = pyqtSignal(object)  # Declare the signal with 'object' type
 
-    def __init__(self, value, *connectedFuncs : typing.Optional[typing.Callable]):
+    def __init__(self, value = None, *connectedFuncs : typing.Optional[typing.Callable]):
         super().__init__()
         self._value = value
         self._funcs = list(map(lambda func: self._signal.connect(func), connectedFuncs)) if connectedFuncs else []
@@ -304,7 +310,7 @@ class ValueThread(QObject):
 
     @value.setter
     def value(self, value):
-        self._value = value
+        self._value = value 
         self._signal.emit(self._value)  
 
     @property

@@ -1,16 +1,16 @@
 from PyQt5.QtWidgets import (
-    QGraphicsView, QGraphicsPolygonItem, QUndoCommand, QUndoStack, QUndoGroup, QGraphicsItem
+    QUndoCommand, QUndoStack, QUndoGroup, QGraphicsItem, QGraphicsView
 )
-from PyQt5.QtGui import QPainter, QColor, QPolygonF, QPixmap, QPen
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPainter, QColor, QPixmap, QPen, QPolygonF
+from PyQt5.QtCore import QRectF, QPointF, QPoint, Qt
+from data_manager import QPolygonFS, ProvenceItem
 
 import random as r
+import typing
+
+from data_manager import ProvenceItem, QPolygonFS
 
     
-@property
-def QRColor():
-    """The QRColor property."""
-    return QColor(r.randint(20,255), r.randint(20,255), r.randint(20,255), 70)
 
 class AddPointCommand(QUndoCommand):
     def __init__(self, view: QGraphicsView, point):
@@ -31,7 +31,7 @@ class AddPointCommand(QUndoCommand):
 
 class PopPointCommand(QUndoCommand):
     def __init__(self, view: QGraphicsView):
-        super().__init__("Remove Last Point")
+        super().__init__()
         self.view = view
         self.last_point = None
 
@@ -50,13 +50,13 @@ class PopPointCommand(QUndoCommand):
 
 class AddCurrentPolygonCommand(QUndoCommand):
     def __init__(self, view: QGraphicsView):
-        super().__init__("Add Polygon")
+        super().__init__()
         self.view = view
-        self.polygon_item = None
+        self.polygon_item : ProvenceItem = None
         self.cp = self.view.current_province
 
     def redo(self):
-        self.polygon_item = QGraphicsPolygonItem(self.view.current_province)
+        self.polygon_item = ProvenceItem(self.view.current_province)
         self.polygon_item.setPen(Qt.red)
         self.polygon_item.setBrush(self.view.QRColor())
         self.polygon_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
@@ -67,12 +67,12 @@ class AddCurrentPolygonCommand(QUndoCommand):
     def undo(self):
         if self.polygon_item:
             self.view.scene().removeItem(self.polygon_item)
-            self.view.current_province = QPolygonF(self.cp)
+            self.view.current_province = QPolygonFS(self.cp)
             self.view.cp_item.setPolygon(self.view.current_province)
         self.view.repaint()
 
 class AddPolygonCommand(QUndoCommand):
-    def __init__(self, view: QGraphicsView, polygon_item: QGraphicsPolygonItem):
+    def __init__(self, view: QGraphicsView, polygon_item: ProvenceItem):
         super().__init__("Add Polygon")
         self.view = view
         self.polygon_item = None if not polygon_item else polygon_item
@@ -105,4 +105,41 @@ class DeletePolygonCommand(QUndoCommand):
         self.view.scene().addItem(self.polygon_item)
         self.view.repaint()
 
-    
+
+
+class MovePointCommand(QUndoCommand):
+    def __init__(self, view: QGraphicsView, old_point: QPointF | QPoint, new_point: QPointF | QPoint, dataItems: list[dict[str, typing.Any]]):
+        super().__init__()
+        self.view = view
+        self.old_point = QPointF(old_point)
+        self.new_point = self.view.current_point_item.pos() - (QPointF(new_point) / self.view.scaleFactor)
+        self.dataItems = dataItems
+        
+
+    def redo(self):
+        """Применяем новую позицию точки"""
+        # print('moving')
+        self.moveCurrentPoint(self.new_point)
+        # print('')
+
+    def undo(self):
+        """Восстанавливаем оригинальную позицию точки"""
+        for data in self.dataItems:
+            item = data['item']
+            
+            # Восстанавливаем из оригинального полигона
+            item.setPolygon(QPolygonF(data['original_polygon']))
+            self.view.cpi_pos = self.old_point
+            self.view.current_point_item.setPos(self.old_point)
+
+            item.update()
+
+    def moveCurrentPoint(self, toPoint: QPoint|QPointF):
+        for data in self.dataItems:
+            polygon = QPolygonFS(data['original_polygon'])
+            for point in polygon:
+                    for i in data['indexes']:
+                        polygon.replace(i, toPoint)
+                    data['item'].setPolygon(polygon)
+        self.view.cpi_pos = toPoint
+        self.view.current_point_item.setPos(toPoint)
