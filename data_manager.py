@@ -119,12 +119,12 @@ class DataManager:
     def import_data(pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
         
-        with open("fordev.txt", "r", encoding="utf-8") as f:
-            res: str = f.read()
-            res = res.split("\n")[1]
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        #     res: str = f.read()
+        #     res = res.split("\n")[1]
 
-        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
-        folder_path = res
+        # folder_path = res
+        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
 
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
@@ -145,11 +145,11 @@ class DataManager:
     @staticmethod
     def load_background(pixoffset: int):
         """Обработчик загрузки фона."""
-        with open("fordev.txt", "r", encoding="utf-8") as f:
-            res: str = f.read()
-            res = res.split("\n")[0]
-        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
-        folder_path = res
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        #     res: str = f.read()
+        #     res = res.split("\n")[0]
+        # folder_path = res
+        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
             return []
