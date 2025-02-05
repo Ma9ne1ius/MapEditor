@@ -41,7 +41,9 @@ Key “F3” - selection of overlapping polygons under the current one.
 
 "F4” key - snap cursor to nearest points for precise editing.
 
-Key “F5” - Mode of selecting a point for dragging. (Cancel works with a delay, it is recommended to hold down for a while)"F6” key - merge selected polygons into one.
+Key “F5” - Mode of selecting a point for dragging. (Cancel works with a delay, it is recommended to hold down for a while)
+
+"F6” key - merge selected polygons into one.
 
 Undo and redo system:
 
