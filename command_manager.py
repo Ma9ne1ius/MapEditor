@@ -139,7 +139,7 @@ class MovePointCommand(QUndoCommand):
             polygon = QPolygonFS(data['original_polygon'])
             for point in polygon:
                     for i in data['indexes']:
-                        polygon.replace(i, self.new_point)
+                        polygon.replace(i, toPoint)
                     data['item'].setPolygon(polygon)
-        self.view.cpi_pos = self.new_point
-        self.view.current_point_item.setPos(self.new_point)
+        self.view.cpi_pos = toPoint
+        self.view.current_point_item.setPos(toPoint)
