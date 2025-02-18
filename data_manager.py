@@ -1,19 +1,15 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import data_manager
 import os, re, orjson
 import numpy as np
 import typing
 import random as r
 import traceback
 from pathlib import Path
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsPolygonItem, QFileDialog, QMessageBox, QGraphicsEllipseItem, QGraphicsView
-from PyQt5.QtGui import QColor, QPixmap, QPen, QBrush, QPolygon, QPolygonF
-from PyQt5.QtCore import Qt, QPointF, QPoint, pyqtSignal, QObject, QRectF, QRect
-# from data_manager import QPolygonFS
-# from data_manager import QPolygonFS
-# from data_manager import QPolygonFS
-
-# from undo_mabager 
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsPixmapItem, QGraphicsPolygonItem, QFileDialog, QMessageBox, QGraphicsEllipseItem, QGraphicsView
+from PySide6.QtGui import QColor, QPixmap, QPen, QBrush, QPolygon, QPolygonF
+from PySide6.QtCore import Qt, QPointF, QPoint, Signal, QObject, QRectF, QRect, QSize, QVariantAnimation, QAbstractAnimation
 
 
 
@@ -71,7 +67,7 @@ class DataManager:
 
                 cells = file_data.get("Data", [])
                 for cell in cells:
-                    poly_item: QGraphicsPolygonItem = DataManager.create_polygon_item(cell, pixoffset)
+                    poly_item: QGraphicsPolygonItem = DataManager.create_provence_item(cell, pixoffset)
                     # provinces = np.append(provinces, poly_item)
                     provinces.append(poly_item)
             except Exception as e:
@@ -96,11 +92,11 @@ class DataManager:
         return items
                 
     @staticmethod
-    def create_polygon_item(province: dict, pixoffset: int):
+    def create_provence_item(province: dict, pixoffset: int):
         points = DataManager.read_points(province, pixoffset)
-        polygon = QPolygonFS(points)
+        polygon = MEPolygonF(points)
         item:ProvenceItem = ProvenceItem(polygon)
-        # item.setZValue(1)
+        item.setZValue(1)
         return item
         # return {"points":points, "province":item}
     
@@ -119,12 +115,12 @@ class DataManager:
     def import_data(pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
         
-        # with open("fordev.txt", "r", encoding="utf-8") as f:
-        #     res: str = f.read()
-        #     res = res.split("\n")[1]
+        with open("fordev.txt", "r", encoding="utf-8") as f:
+            res: str = f.read()
+            res = res.split("\n")[1].strip()
 
-        # folder_path = res
-        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
+        folder_path = res
+        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
 
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
@@ -145,11 +141,11 @@ class DataManager:
     @staticmethod
     def load_background(pixoffset: int):
         """Обработчик загрузки фона."""
-        # with open("fordev.txt", "r", encoding="utf-8") as f:
-        #     res: str = f.read()
-        #     res = res.split("\n")[0]
-        # folder_path = res
-        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
+        with open("fordev.txt", "r", encoding="utf-8") as f:
+            res: str = f.read()
+            res = res.split("\n")[0].strip()
+        folder_path = res
+        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
             return []
@@ -229,6 +225,7 @@ class DataManager:
                 if i < len(data) - 1:
                     file.write(",\n")
             file.write("\n]}\n")
+    
 
 class QPointFH(QPointF):
     """docstring for QPointFH."""
@@ -244,37 +241,172 @@ class QPointFH(QPointF):
     def __eq__(self, other):
         return self.x() == other.x() and self.y() == other.y()
 
-class QPolygonFS(QPolygonF):
-    """MapEditor.QPolygonF"""
+class MEPolygonF(QPolygonF):
+    """MapEditor.MEPolygonF"""
 
     def __init__(self, a=None):
+        """
+        Инициализирует объект MEPolygonF.
+
+        Параметры:
+        
+        a: Переменное количество аргументов, которые могут быть:
+            - None: Инициализирует пустой полигон.
+            - MEPolygonF: Инициализирует полигон на основе другого объекта MEPolygonF.
+            - typing.Iterable: Инициализирует полигон на основе итерации точек.
+            - QRectF: Инициализирует полигон на основе прямоугольника.
+            - MEPolygon: Инициализирует полигон на основе объекта MEPolygon.
+
+        Исключения:
+        TypeError: Если переданы аргументы неподдерживаемого типа.
+
+        Описание:
+        - Если аргументы не переданы, инициализирует пустой полигон.
+        - Если передан объект MEPolygonF, инициализирует полигон на основе другого объекта MEPolygonF.
+        - Если передана итерация, инициализирует полигон с указанными точками.
+        - Если передан объект QRectF, инициализирует полигон на основе прямоугольника.
+        - Если передан объект MEPolygon, инициализирует полигон на основе объекта MEPolygon.
+        """
         if a is None:
             super().__init__()
         elif isinstance(a, QPolygonF):
             super().__init__(a)
+        elif isinstance(a, QRectF) or isinstance(a, QRect):
+            super().__init__(a)
+        elif isinstance(a, QPolygon) or isinstance(a, typing.Sequence) and all(isinstance(point, QPoint) for point in a):
+            super().__init__(a)
+        elif isinstance(a, typing.Sequence) and all(isinstance(point, QPointF) for point in a):
+            super().__init__(a)
+        else:
+            raise TypeError("Invalid argument type for MEPolygonF")
+
+    def replace(self, index: int, point: QPointF):
+        points = self.toList()
+        points[index] = point
+        self.clear()
+        self.append(points)
+
+    def indexOf(self, point: QPointF):
+        points:list = self.toList()
+        return points.index(point)
+    
+    def isEmpty(self):
+        return self.size() == 0
+
+    def isClosed(self):
+        return self.first() == self.last()
+    
+    def __repr__(self):
+        return f"MEPolygonF({[f'{point.x(), point.y()}' for point in self]})"
+
+class MEPolygon(QPolygon):
+    """MapEditor.MEPolygon"""
+
+    def __init__(self, a=None):
+        """
+        Инициализирует объект MEPolygon.
+
+        Параметры:
+        
+        a: Переменное количество аргументов, которые могут быть:
+            - None: Инициализирует пустой полигон.
+            - typing.Iterable: Инициализирует полигон на основе итерации точек.
+            - QRect: Инициализирует полигон на основе прямоугольника.
+            - MEPolygonF: Инициализирует полигон на основе объекта MEPolygonF.
+            - MEPolygon: Инициализирует полигон на основе другого объекта MEPolygon.
+
+        Исключения:
+        TypeError: Если переданы аргументы неподдерживаемого типа.
+
+        Описание:
+        - Если аргументы не переданы, инициализирует пустой полигон.
+        - Если передана итерация, инициализирует полигон с указанными точками.
+        - Если передан объект QRect, инициализирует полигон на основе прямоугольника.
+        - Если передан объект MEPolygonF, инициализирует полигон на основе объекта MEPolygonF.
+        - Если передан объект MEPolygon, инициализирует полигон на основе другого объекта MEPolygon.
+        """
+        
+        if a is None:
+            super().__init__()
         elif isinstance(a, typing.Iterable):
+            super().__init__(list(a))
+        elif isinstance(a, QRect):
             super().__init__(a)
-        elif isinstance(a, QRectF):
-            super().__init__(a)
+        elif isinstance(a, QPolygonF):
+            super().__init__(a.toPolygon())
         elif isinstance(a, QPolygon):
             super().__init__(a)
         else:
-            raise TypeError("Invalid argument type for QPolygonFS")
+            raise TypeError("Invalid argument type for MEPolygon")
+        
+    def replace(self, index:int, point:QPoint):
+        points:list = self.toList()
+        points.insert(index, point)
+        self = MEPolygon(points)
+
+    def indexOf(self, point: QPoint) -> int:
+        points:list = self.toList()
+        return points.index(point)
+    
+    def isEmpty(self):
+        return self.count() == 0
+
+    def isClosed(self):
+        return self.first() == self.last()
 
     def __repr__(self):
-        return f"QPolygonFS({[f'{point.x(), point.y()}' for point in self]})"
+        return f"MEPolygonF({[f'{point.x(), point.y()}' for point in self]})"
+    
+class MERect(QRect):
+    """docstring for MERect."""
+    
+    def __init__(self, *a):
+        """
+        Параметры:
+        
+        *a: Переменное количество аргументов, которые могут быть:
+            - Четыре целых числа (x, y, width, height)
+            - Два объекта QPoint (верхний левый угол и нижний правый угол)
+            - Объект QPoint и объект QSize (верхний левый угол и размер)
+            - Объект QRect (другой прямоугольник)
+        
+        Исключения:
+        TypeError: Если переданы аргументы неподдерживаемого типа или количества.
+
+        Описание:
+        - Если аргументы не переданы, инициализирует пустой прямоугольник.
+        - Если переданы четыре целых числа, инициализирует прямоугольник с указанными координатами и размерами.
+        - Если переданы два объекта QPoint, инициализирует прямоугольник с указанными углами.
+        - Если переданы объект QPoint и объект QSize, инициализирует прямоугольник с указанным углом и размером.
+        - Если передан объект QRect, инициализирует прямоугольник на основе другого прямоугольника.
+        """
+        
+        if a is None:
+            super().__init__()
+        elif all(isinstance(i, int) for i in a) and len(a) == 4:
+            super().__init__(a[0], a[1], a[2], a[3])
+        elif isinstance(a[0], QPoint) and isinstance(a[1], QSize):
+            super().__init__(a[0], a[1])
+        elif all(isinstance(i, QPoint) for i in a) and len(a) == 2:
+            super().__init__(a[0], a[1])
+        elif isinstance(a[0], QRect):
+            super().__init__(a[0])
+        else:
+            raise TypeError("Invalid argument type for MERect")
+        
 
     
 class ProvenceItem(QGraphicsPolygonItem):
-    """docstring for ProvenceItem."""
+    """MapEditor.ProvenceItem"""
     
-    def __init__(self, a:QPolygon|QPolygonF|QPolygonFS=None, parent:QGraphicsItem=None):
+    def __init__(self, a:QPolygon|QPolygonF=None, parent:QGraphicsItem=None):
         if a is None:
             super().__init__(parent)
-        elif isinstance(a, QPolygonF|QPolygon|QPolygonFS):
+        elif isinstance(a, QPolygonF|QPolygon):
             super().__init__(a, parent)
         else:
             raise TypeError("Invalid argument type for ProvenceItem")
+        
         self.setPen(QPen(Qt.red))
         self.setFlag(QGraphicsItem.ItemIsSelectable,True)
         self.setBrush(QBrush(QColor(r.randint(100,255), r.randint(100,255), r.randint(100,255), 75)))
@@ -286,22 +418,58 @@ class ProvenceItem(QGraphicsPolygonItem):
     @property
     def Polygon(self):
         """The polygon property."""
-        return QPolygonFS(self.polygon())
+        return MEPolygonF(self.polygon())
     @Polygon.setter
-    def Polygon(self, value: QPolygonF | QPolygon | QPolygonFS):
+    def Polygon(self, value: QPolygonF | QPolygon):
         self.setPolygon(value)    
 
+class MEPolygonItem(QGraphicsPolygonItem):
+    """MapEditor.MEPolygonItem"""
+    
+    def __init__(self, a:QPolygon|QPolygonF=None, parent:QGraphicsItem=None):
+        if a is None:
+            super().__init__(parent)
+        elif isinstance(a, QPolygonF|QPolygon):
+            super().__init__(a, parent)
+        else:
+            raise TypeError("Invalid argument type for MEPolygonItem")
+    
+    def moveTo(self, *next_pos:QPoint|QPointF|float|int, duration:int=250):
+        if len(next_pos) == 1 and isinstance(next_pos[0], QPoint|QPointF):
+            next_pos = next_pos[0]
+        elif len(next_pos) == 2 and all(isinstance(i, int|float) for i in next_pos):
+            next_pos = QPointF(*next_pos)
+        else:
+            raise TypeError("Invalid argument type for moveTo")
+            
+        self._animation = QVariantAnimation(
+            duration = duration,
+            valueChanged = self.setPos,
+            startValue = self.pos(),
+            endValue = next_pos)
+        self._animation.start(QAbstractAnimation.DeleteWhenStopped)
+        
+    def __repr__(self):
+        return f"MEPolygonItem({self.Polygon.__repr__()})"
+    
+    @property
+    def Polygon(self):
+        """The polygon property."""
+        return MEPolygonF(self.polygon())
+    @Polygon.setter
+    def Polygon(self, value: QPolygonF | QPolygon):
+        self.setPolygon(value)
     
     
 class valuethread(QObject):
     """Потокобезопасный хранитель значения с сигналом PyQt для обновлений."""
     
-    _signal = pyqtSignal(object)  # Declare the signal with 'object' type
+    _signal = Signal(object)  # Declare the signal with 'object' type
 
     def __init__(self, value = None, *connectedFuncs : typing.Optional[typing.Callable]):
         super().__init__()
         self._value = value
-        self._funcs = list(map(lambda func: self._signal.connect(func), connectedFuncs)) if connectedFuncs else []
+        self._funcs = list(map(lambda func: self._signal.connect(func), filter(lambda func: callable(func), connectedFuncs))) if connectedFuncs else []
     
     @property
     def value(self):
@@ -333,3 +501,4 @@ class valuethread(QObject):
     def removeConnection(self, function):
         self._signal.disconnect(function)
         self._funcs.remove(function)
+
