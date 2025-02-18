@@ -11,7 +11,7 @@ Mouse wheel - zoom the map for convenient work with details.
 
 Working with polygons:
 
-Double left click - select a polygon to edit (change its shape or move it).
+Double left click - select a polygon to edit (change its shape).
 
 Double right click - add a new point to the current polygon.
 
@@ -21,7 +21,7 @@ Backspace key - deletes the last added point from the current polygon.
 
 Space key - finalize polygon creation and add it to the map.
 
-Delete key - delete the selected polygon(s).
+Delete key - delete the selected polygon(s) (if you select the current point, then the vertices of the colliding polygons will be deleted).
 
 Display settings:
 
@@ -35,11 +35,11 @@ Editing tools:
 
 Key “F1” - selection of several objects for group editing.
 
-Key “F2” - clearing the selection.
+Key “Shift+F1” - clearing the selection.
 
-Key “F3” - selection of overlapping polygons under the current one.
+Key “Ctrl+F1” - selection of overlapping polygons under the current one.
 
-"F4” key - snap cursor to nearest points for precise editing.
+"F2” key - snap cursor to closest points for precise editing.
 
 Key “Ctrl+F2” - Mode of selecting a point for dragging. (Undo works with a delay, it is recommended to hold down for a while)
 
@@ -61,7 +61,7 @@ Notes:
 
 Use “-” and “=” to change the speed (step) of moving on the map.
 
-Use “_” and “+” to adjust the distance of points anchoring.
+Use “Ctrl+-” and “Ctrl+=” to adjust the distance of points anchoring.
 
 
 (Ru)
@@ -75,7 +75,7 @@ WASD, стрелки или перетаскивание правой кнопк
 
 Работа с полигонами:
 
-Двойной клик левой кнопкой мыши — выбор полигона для редактирования (изменение формы или перемещение).
+Двойной клик левой кнопкой мыши — выбор полигона для редактирования (изменение формы).
 
 Двойной клик правой кнопкой мыши — добавление новой точки в текущий полигон.
 
@@ -85,7 +85,7 @@ WASD, стрелки или перетаскивание правой кнопк
 
 Клавиша Space — завершение создания полигона и добавление его на карту.
 
-Клавиша Delete — удалить выбранный/ые полигон/ы.
+Клавиша Delete — удалить выбранный/ые полигон/ы (если выбирать текущую точку то удалятся и вершины касающихся полигонов).
 
 Настройка отображения:
 
@@ -99,15 +99,15 @@ WASD, стрелки или перетаскивание правой кнопк
 
 Клавиша "F1" — выбор нескольких объектов для группового редактирования.
 
-Клавиша "F2" — очистка выбора.
+"Shift+F1" — очистка выбора.
 
-Клавиша "F3" — выбор перекрывающихся полигонов под текущим.
+"Ctrl+F1" — выбор перекрывающихся полигонов под текущим полигоном.
 
-Клавиша "F4" — привязка курсора к ближайшим точкам для точного редактирования.
+Клавиша "F2" — привязка курсора к ближайшим точкам.
 
-Клавиша "F5" — Режим выбора точки для перетаскивания. (Отмена работает с задержкой, рекомендуется зажать)
+"Ctrl+F2" — Режим выбора точки для перетаскивания. (Отмена перетаскивания работает с задержкой, рекомендуется зажать)
 
-Клавиша "F6" — объединение выбранных полигонов в один.
+Клавиша "F3" — объединение выбранных полигонов в один.
 
 Система отката и повтора:
 
@@ -125,4 +125,4 @@ Ctrl + S — сохранение текущей карты в JSON-файлы.
 
 Используйте "-" и "=" для изменения скорости перемещения по карте.
 
-Клавиши "_" и "+" регулируют расстояние привязки точек.
+Клавиши “Ctrl+-” и “Ctrl+=” регулируют расстояние привязки точек.
