@@ -21,7 +21,7 @@ Backspace key - deletes the last added point from the current polygon.
 
 Space key - finalize polygon creation and add it to the map.
 
-Delete key - delete the selected polygon(s) ((if you select the current point, then the vertices of the colliding polygons will be deleted).).
+Delete key - delete the selected polygon(s) (if you select the current point, then the vertices of the colliding polygons will be deleted).
 
 Display settings:
 
