@@ -3,7 +3,9 @@ from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 from data_manager import DataManager, ProvenceItem, MEPolygonF, MEPolygonItem
 import random as r
-from command_manager import AddPointAfterCommand, AddPointBeforeCommand, AddPointCommand, MovePointCommand, PopPointCommand, AddCurrentPolygonCommand, AddPolygonCommand, DeletePolygonCommand, DeletePolygonPointCommand
+from command_manager import (AddCurrentPolygonCommand, AddPointAfterCommand, AddPointBeforeCommand,
+    AddPointCommand, AddPolygonCommand, DeletePolygonCommand, DeletePolygonPointCommand,
+    MovePointCommand, PopPointCommand, UnitePolygonsCommand)
 
 from PySide6.QtWidgets import QGraphicsPolygonItem, QGraphicsView, QGraphicsPixmapItem, QRubberBand, QGraphicsItem, QGraphicsScene, QGraphicsLineItem, QWidget
 from PySide6.QtGui import QPolygonF, QPen, QBrush, QColor, QPolygon, QUndoStack
@@ -91,8 +93,8 @@ class InteractiveGraphicsView(QGraphicsView):
         """Update the polygon for the current province."""
         self.undoStack.push(AddCurrentPolygonCommand(self))
 
-    def deleteProvince(self, province: ProvenceItem):
-        self.undoStack.push(DeletePolygonCommand(self, province))
+    def deleteProvince(self, provinces: typing.Sequence[ProvenceItem]):
+        self.undoStack.push(DeletePolygonCommand(self, provinces))
 
     def addPoint(self, position):
         """Add a point to the current province."""
@@ -182,11 +184,12 @@ class InteractiveGraphicsView(QGraphicsView):
             unified_polygon = max(unified_polygon, key=lambda p: p.area)
 
         new_polygon_qt = from_shapely_polygon(unified_polygon)
-        new_poly_item = ProvenceItem(new_polygon_qt)
+        new_provence = ProvenceItem(new_polygon_qt)
 
-        for item in selectedItems:
-            self.deleteProvince(item)
-        self.undoStack.push(AddPolygonCommand(self, new_poly_item))
+        # for item in selectedItems:
+        #     self.deleteProvince(item)
+        # self.undoStack.push(AddPolygonCommand(self, new_provence))
+        self.undoStack.push(UnitePolygonsCommand(self, new_provence, selectedItems))
 
     def _toggle_save_select(self):
         self.isSaveSelecting = not self.isSaveSelecting
@@ -207,11 +210,9 @@ class InteractiveGraphicsView(QGraphicsView):
         self.timer.start()
 
     def _toggle_delete(self):
-        for item in self.scene().selectedItems():
-            if isinstance(item, ProvenceItem):
-                self.deleteProvince(item)
-            elif item is self.current_point_item:
-                self.undoStack.push(DeletePolygonPointCommand(self, self.current_point_item_pos, self.dataItems))
+        if self.current_point_item in self.scene().selectedItems() and len(self.scene().selectedItems()) == 1:
+            self.undoStack.push(DeletePolygonPointCommand(self, self.current_point_item_pos, self.dataItems))
+        self.deleteProvince(list(filter(lambda item: isinstance(item, ProvenceItem), self.scene().selectedItems())))
 
     def _toggle_polygon_body_visible(self):
         for item in filter(lambda item: isinstance(item, ProvenceItem), self.scene().items()):
@@ -291,7 +292,7 @@ class InteractiveGraphicsView(QGraphicsView):
             Qt.Key_Up: lambda: vertical_bar.setValue(vertical_bar.value() - self.translation_step),
             Qt.Key_W: lambda: vertical_bar.setValue(vertical_bar.value() - self.translation_step),
             Qt.Key_Down: lambda: vertical_bar.setValue(vertical_bar.value() + self.translation_step),
-            Qt.Key_S: lambda: vertical_bar.setValue(vertical_bar.value() + self.translation_step),
+            Qt.Key_S: self._toggle_save_jsons if event.modifiers() & Qt.ControlModifier else lambda: vertical_bar.setValue(vertical_bar.value() + self.translation_step),
             Qt.Key_Left: lambda: horizontal_bar.setValue(horizontal_bar.value() - self.translation_step),
             Qt.Key_A: lambda: horizontal_bar.setValue(horizontal_bar.value() - self.translation_step),
             Qt.Key_Right: lambda: horizontal_bar.setValue(horizontal_bar.value() + self.translation_step),
@@ -318,7 +319,6 @@ class InteractiveGraphicsView(QGraphicsView):
             Qt.Key_Space: lambda: self.add_province_polygon(self.current_province),
             Qt.Key_Z: lambda: self.undoStack.undo() if event.modifiers() & Qt.ControlModifier else None,
             Qt.Key_Y: lambda: self.undoStack.redo() if event.modifiers() & Qt.ControlModifier else None,
-            Qt.Key_S: self._toggle_save_jsons if event.modifiers() & Qt.ControlModifier else None,
             Qt.Key_O: self._toggle_upload_map_data if event.modifiers() & Qt.ControlModifier else None
         }.get(event.key(), None)
         
@@ -375,7 +375,6 @@ class InteractiveGraphicsView(QGraphicsView):
         handle = {
             self.isConnectCircleVisible: lambda: self.addPoint(self.closest_point) if (not self.closest_point is None) &\
                 (not (self.isSaveSelecting or self.isF5Pressed)) else None,
-            self.isSaveSelecting: lambda: self.addPoint(self.mapToScene(event.position().toPoint()).toPoint()) if not self.isConnectCircleVisible else None,
         }.get(True, None)
         
         handle() if isinstance(handle, typing.Callable) else None
@@ -392,7 +391,7 @@ class InteractiveGraphicsView(QGraphicsView):
         handle = {
             Qt.LeftButton: lambda:self.handle_double_left_button(event),
             Qt.MiddleButton: ...,
-            Qt.RightButton: ...
+            Qt.RightButton: lambda: self.addPoint(self.mapToScene(event.position().toPoint()).toPoint()) if not self.isConnectCircleVisible else None
         }.get(event.button(), None)
 
         handle() if isinstance(handle, typing.Callable) else super().mouseDoubleClickEvent(event)
@@ -483,7 +482,7 @@ class InteractiveGraphicsView(QGraphicsView):
         if self.isPolygonEdgeVisible:
             item.setPen(QPen(QColor(0, 0, 0, 0)))
         else:
-            item.setPen(QPen(Qt.red))
+            item.setPen(QPen(QColor(255, 0, 0)))
 
     def redrawPolygonBody(self, item):
         if self.isPolygonBodyVisible:

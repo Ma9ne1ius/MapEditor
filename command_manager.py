@@ -58,7 +58,7 @@ class AddCurrentPolygonCommand(QUndoCommand):
 
     def redo(self):
         self.provence_item = ProvenceItem(self.view.current_province_polygon)
-        self.provence_item.setPen(Qt.red)
+        self.provence_item.setPen(QColor(255, 0, 0))
         self.provence_item.setBrush(self.view.QRColor())
         self.provence_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.view.scene().addItem(self.provence_item)
@@ -72,6 +72,24 @@ class AddCurrentPolygonCommand(QUndoCommand):
             self.view.current_province.setPolygon(self.view.current_province_polygon)
         self.view.repaint()
 
+class UnitePolygonsCommand(QUndoCommand):
+    def __init__(self, view:QGraphicsView, new_provence:ProvenceItem, old_provinces:typing.Sequence[ProvenceItem]):
+        super().__init__("Unite Polygons")
+        self.view = view
+        self.new_provence = new_provence
+        self.old_provinces = old_provinces
+    
+    def redo(self):
+        for item in self.old_provinces:
+            self.view.scene().removeItem(item)
+        self.view.repaint()
+        self.view.scene().addItem(self.new_provence)
+    
+    def undo(self):
+        self.view.scene().removeItem(self.new_provence)
+        list(map(lambda item: self.view.scene().addItem(item), self.old_provinces))
+            
+
 class AddPolygonCommand(QUndoCommand):
     def __init__(self, view:QGraphicsView, provence_item:ProvenceItem):
         super().__init__("Add Polygon")
@@ -79,9 +97,6 @@ class AddPolygonCommand(QUndoCommand):
         self.provence_item = None if not provence_item else provence_item
 
     def redo(self):
-        self.provence_item.setPen(Qt.red)
-        self.provence_item.setBrush(self.view.QRColor())
-        self.provence_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.provence_item.setZValue(self.view.provence_level)
         self.view.scene().addItem(self.provence_item)
         self.view.repaint()
@@ -94,17 +109,19 @@ class AddPolygonCommand(QUndoCommand):
 
 
 class DeletePolygonCommand(QUndoCommand):
-    def __init__(self, view:QGraphicsView, provence_item:ProvenceItem):
+    def __init__(self, view:QGraphicsView, provence_items:typing.Sequence[ProvenceItem]):
         super().__init__("Delete Polygon")
         self.view = view
-        self.provence_item = provence_item
+        self.provence_items = provence_items
 
     def redo(self):
-        self.view.scene().removeItem(self.provence_item)
+        for item in self.provence_items:
+            self.view.scene().removeItem(item)
         self.view.repaint()
 
     def undo(self):
-        self.view.scene().addItem(self.provence_item)
+        for item in self.provence_items:
+            self.view.scene().addItem(item)
         self.view.repaint()
 
 

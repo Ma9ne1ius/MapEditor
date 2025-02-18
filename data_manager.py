@@ -78,8 +78,8 @@ class DataManager:
     @staticmethod
     def create_point_item(position:QPointF):
         item: QGraphicsEllipseItem = QGraphicsEllipseItem(position.x() - 0.5, position.y() - 0.5, 1, 1)
-        item.setPen(QPen(Qt.red))
-        item.setBrush(QBrush(Qt.red))
+        item.setPen(QPen(QColor(255, 0, 0)))
+        item.setBrush(QBrush(QColor(255, 0, 0)))
         item.setVisible(False)
         return item
     
@@ -115,12 +115,12 @@ class DataManager:
     def import_data(pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
         
-        with open("fordev.txt", "r", encoding="utf-8") as f:
-            res: str = f.read()
-            res = res.split("\n")[1].strip()
-
-        folder_path = res
-        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        #     res: str = f.read()
+        #     res = res.split("\n")[1].strip()
+        # folder_path = res
+        
+        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
 
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
@@ -141,11 +141,14 @@ class DataManager:
     @staticmethod
     def load_background(pixoffset: int):
         """Обработчик загрузки фона."""
-        with open("fordev.txt", "r", encoding="utf-8") as f:
-            res: str = f.read()
-            res = res.split("\n")[0].strip()
-        folder_path = res
-        # folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
+        
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        #     res: str = f.read()
+        #     res = res.split("\n")[0].strip()
+        # folder_path = res
+        
+        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
+        
         if not folder_path:
             QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
             return []
@@ -407,7 +410,7 @@ class ProvenceItem(QGraphicsPolygonItem):
         else:
             raise TypeError("Invalid argument type for ProvenceItem")
         
-        self.setPen(QPen(Qt.red))
+        self.setPen(QPen(QColor(255, 0, 0)))
         self.setFlag(QGraphicsItem.ItemIsSelectable,True)
         self.setBrush(QBrush(QColor(r.randint(100,255), r.randint(100,255), r.randint(100,255), 75)))
         
