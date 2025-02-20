@@ -102,7 +102,7 @@ class DataManager:
     
     @staticmethod
     def read_points(province:dict, pixoffset: int):
-        return [QPointF(x + pixoffset, y + pixoffset) for x, y in zip(province["pX"], province["pY"])]
+        return [MEPointF(x + pixoffset, y + pixoffset) for x, y in zip(province["pX"], province["pY"])]
 
     def read_file(file_path):
         """Чтение содержимого файла."""
@@ -115,16 +115,26 @@ class DataManager:
     def import_data(pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
         
-        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        # with open("dist/fordev.txt", "r", encoding="utf-8") as f:
         #     res: str = f.read()
         #     res = res.split("\n")[1].strip()
         # folder_path = res
         
         folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
 
+        path = os.path.join('', "lastprov.txt")
         if not folder_path:
-            QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
-            return []
+            QMessageBox.warning(None, "Внимание", "Папка не выбрана! Будет выбран последний путь.")
+            with open(path, "r", encoding="utf-8") as file:
+                res: str = file.read()
+                res = res.split("\n")[0].strip()
+            folder_path = res if res else QMessageBox.warning(None, "Внимание", "...")
+            if not res:
+                return []
+        else:
+            # if not (folder_path in file.read()) else None
+            with open(path, "w+", encoding="utf-8") as file:
+                file.write(folder_path)
         try:
             res = DataManager.load_data_from_folder(folder_path, pixoffset)
             return res
@@ -142,17 +152,26 @@ class DataManager:
     def load_background(pixoffset: int):
         """Обработчик загрузки фона."""
         
-        # with open("fordev.txt", "r", encoding="utf-8") as f:
+        # with open("dist/fordev.txt", "r", encoding="utf-8") as f:
         #     res: str = f.read()
         #     res = res.split("\n")[0].strip()
         # folder_path = res
         
         folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
         
+        path = os.path.join('', "lastback.txt")
         if not folder_path:
-            QMessageBox.warning(None, "Внимание", "Папка не выбрана!")
-            return []
-
+            QMessageBox.warning(None, "Внимание", "Папка не выбрана! Будет выбран последний путь.")
+            with open(path, "r", encoding="utf-8") as file:
+                res: str = file.read()
+                res = res.split("\n")[0].strip()
+            folder_path = res if res else QMessageBox.warning(None, "Внимание", "...")
+            if not res:
+                return []
+        else:
+            with open(path, "w+", encoding="utf-8") as file:
+                file.write(folder_path + '\n') 
+        
         """Загружает PNG-файлы из папки в словарь с координатами."""
         pngs = [f for f in os.listdir(folder_path) if f.endswith(".png")]
 
@@ -230,13 +249,21 @@ class DataManager:
             file.write("\n]}\n")
     
 
-class QPointFH(QPointF):
-    """docstring for QPointFH."""
-    def __init__(self, x:int|float, y:int|float):
-        super(QPointFH, self).__init__(x, y)
+class MEPointF(QPointF):
+    """docstring for MEPointF."""
+    
+    def __init__(self, *args):
+        if len(args) == 2 and all(isinstance(i, int|float) for i in args):
+            super().__init__(*args)
+        elif len(args) == 1 and isinstance(args[0], QPointF):
+            super().__init__(args[0])
+        elif len(args) == 1 and isinstance(args[0], QPoint):
+            super().__init__(args[0])
+        elif not args or args[0] is None:
+            super().__init__()
         
-    def __init__(self, point:QPointF):
-        super(QPointFH, self).__init__(point)
+        else:
+            raise TypeError("Invalid argument type for MEPointF")
         
     def __hash__(self):
         return hash((self.x(), self.y()))
@@ -289,10 +316,10 @@ class MEPolygonF(QPolygonF):
         self.clear()
         self.append(points)
 
-    def indexOf(self, point: QPointF):
+    def indexOf(self, point: QPointF | QPoint, isStrictly: bool = True) -> int:
         points:list = self.toList()
-        return points.index(point)
-    
+        return points.index(point) if (point in points) & isStrictly else points.index(min(list(map(lambda point1: point1 - point, points)), key=lambda point: point.manhattanLength()))
+    # min([QPoint(r.randint(0, 100), r.randint(0, 100)) for i in range(100)], key=lambda point: point.x() + point.y())
     def isEmpty(self):
         return self.size() == 0
 
@@ -441,7 +468,7 @@ class MEPolygonItem(QGraphicsPolygonItem):
         if len(next_pos) == 1 and isinstance(next_pos[0], QPoint|QPointF):
             next_pos = next_pos[0]
         elif len(next_pos) == 2 and all(isinstance(i, int|float) for i in next_pos):
-            next_pos = QPointF(*next_pos)
+            next_pos = MEPointF(*next_pos)
         else:
             raise TypeError("Invalid argument type for moveTo")
             

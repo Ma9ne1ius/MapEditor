@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPainter, QColor, QPixmap, QPen, QPolygonF, QUndoCommand
 from PySide6.QtCore import QRectF, QPointF, QPoint, Qt
-from data_manager import MEPolygonF, MEPolygonItem, ProvenceItem
+from data_manager import MEPointF, MEPolygonF, MEPolygonItem, ProvenceItem
 
 import random as r
 import shapely.geometry
@@ -63,6 +63,7 @@ class AddCurrentPolygonCommand(QUndoCommand):
         self.provence_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.view.scene().addItem(self.provence_item)
         self.view.current_province.setPolygon(MEPolygonF())
+        self.view.current_province_polygon.clear()
         self.view.repaint()
 
     def undo(self):
@@ -130,7 +131,7 @@ class MovePointCommand(QUndoCommand):
     def __init__(self, view:QGraphicsView, old_point:QPointF | QPoint, new_point:QPointF | QPoint, dataItems:list[dict[str, typing.Any]]):
         super().__init__()
         self.view = view
-        self.old_point = QPointF(old_point)
+        self.old_point = MEPointF(old_point)
         self.new_point = new_point
         self.dataItems = dataItems
         
