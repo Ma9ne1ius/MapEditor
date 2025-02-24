@@ -55,13 +55,10 @@ class AddCurrentPolygonCommand(QUndoCommand):
         super().__init__()
         self.view = view
         self.provence_item:ProvenceItem = None
-        self.current_province_polygon = self.view.current_province_polygon
+        self.current_province_polygon = MEPolygonF(self.view.current_province_polygon)
 
     def redo(self):
-        self.provence_item = ProvenceItem(self.view.current_province_polygon)
-        self.provence_item.setPen(QColor(255, 0, 0))
-        self.provence_item.setBrush(self.view.QRColor())
-        self.provence_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.provence_item = ProvenceItem(self.current_province_polygon)
         self.view.scene().addItem(self.provence_item)
         self.view.current_province.setPolygon(MEPolygonF())
         self.view.current_province_polygon.clear()
@@ -71,7 +68,7 @@ class AddCurrentPolygonCommand(QUndoCommand):
         if self.provence_item:
             self.view.scene().removeItem(self.provence_item)
             self.view.current_province_polygon = MEPolygonF(self.current_province_polygon)
-            self.view.current_province.setPolygon(self.view.current_province_polygon)
+            self.view.current_province.setPolygon(self.current_province_polygon)
         self.view.repaint()
 
 class UnitePolygonsCommand(QUndoCommand):

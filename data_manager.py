@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt, QPointF, QPoint, Signal, QObject, QRectF, QRect, 
 
 
 def data_folder_path_load(file_name:str):
-    data_folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
+    data_folder_path = QFileDialog.getExistingDirectory(None, "")
 
     path = os.path.join('', file_name)
     if not data_folder_path:
@@ -37,10 +37,7 @@ class DataManager:
         self.scene = scene
         self.pixoffset = 1
         
-        data_folder = data_folder_path_load("lastprov.txt")
-        background_folder = data_folder_path_load("lastback.txt")
-        self.tiles = DataManager.load_background(background_folder, self.pixoffset)
-        self.data = DataManager.import_data(data_folder,self.pixoffset)
+        self.load_data()
 
         # for tile in self.tiles:
         #     scene.addItem(tile)
@@ -49,6 +46,12 @@ class DataManager:
         # for province in province:
         #     scene.addItem(province)
         list(map(lambda province: scene.addItem(province), provinces))
+
+    def load_data(self):
+        data_folder = data_folder_path_load("lastprov.txt")
+        background_folder = data_folder_path_load("lastback.txt")
+        self.tiles = DataManager.load_background(background_folder, self.pixoffset)
+        self.data = DataManager.import_data(data_folder, self.pixoffset)
             
     
     

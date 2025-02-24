@@ -201,8 +201,7 @@ class InteractiveGraphicsView(QGraphicsView):
         self.translation_step += 1 if self.translation_step < 250 else 0
 
     def _toggle_upload_map_data(self):
-        self.dataManager.load_background(self.dataManager.pixoffset)
-        self.dataManager.import_data(self.dataManager.pixoffset)
+        self.dataManager.load_data()
 
     def _toggle_save_jsons(self):
         self.timer.stop()
