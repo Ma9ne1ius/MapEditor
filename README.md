@@ -17,33 +17,35 @@ Double right click - add a new point to the current polygon.
 
 Left mouse button drag - select several polygons simultaneously.
 
-Backspace key - deletes the last added point from the current polygon.
+Backspace - deletes the last added point from the current polygon.
 
-Space key - finalize polygon creation and add it to the map.
+Space - finalize polygon creation and add it to the map.
 
-Delete key - delete the selected polygon(s) (if you select the current point, then the vertices of the colliding polygons will be deleted).
+Delete - delete the selected polygon(s) (if you select the current point, then the vertices of the colliding polygons will be deleted).
 
 Display settings:
 
-Key “1” - turn on/off the map background.
+“1” - turn on/off the map background.
 
-Key “2” - turn on/off the display of polygon contours.
+“2” - turn on/off the display of polygon contours.
 
-Key “3” - enable/disable filling of polygons for their visualization.
+“3” - enable/disable filling of polygons for their visualization.
 
 Editing tools:
 
-Key “F1” - selection of several objects for group editing.
+“F1” - selection of several objects for group editing.
 
-Key “Shift+F1” - clearing the selection.
+“Shift+F1” - clearing the selection.
 
-Key “Ctrl+F1” - selection of overlapping polygons under the current one.
+“Ctrl+F1” - selection of overlapping polygons under the current one.
 
-"F2” key - snap cursor to closest points for precise editing.
+"F2” - snap cursor to closest points for precise editing.
 
-Key “Ctrl+F2” - Mode of selecting a point for dragging. (Undo works with a delay, it is recommended to hold down for a while)
+“Ctrl+F2” - Mode of selecting a point for dragging. (Undo works with a delay, it is recommended to hold down for a while)
 
-"F3” key - merge selected polygons into one.
+"F3” - merge selected polygons into one.
+
+"F4"/"Shift + F4" - add a point before/after current point for selected provence.
 
 Undo and redo system:
 
@@ -63,7 +65,6 @@ Use “-” and “=” to change the speed (step) of moving on the map.
 
 Use “Ctrl+-” and “Ctrl+=” to adjust the distance of points anchoring.
 
-
 (Ru)
 Управление:
 
@@ -81,33 +82,35 @@ WASD, стрелки или перетаскивание правой кнопк
 
 Перетаскивание левой кнопкой мыши — выделение нескольких полигонов одновременно.
 
-Клавиша Backspace — удаление последней добавленной точки из текущего полигона.
+Backspace — удаление последней добавленной точки из текущего полигона.
 
-Клавиша Space — завершение создания полигона и добавление его на карту.
+Space — завершение создания полигона и добавление его на карту.
 
-Клавиша Delete — удалить выбранный/ые полигон/ы (если выбирать текущую точку то удалятся и вершины касающихся полигонов).
+Delete — удалить выбранный/ые полигон/ы (если выбирать текущую точку то удалятся и вершины касающихся полигонов).
 
 Настройка отображения:
 
-Клавиша "1" — включение/выключение заднего фона карты.
+"1" — включение/выключение заднего фона карты.
 
-Клавиша "2" — включение/выключение отображения контуров полигонов.
+"2" — включение/выключение отображения контуров полигонов.
 
-Клавиша "3" — включение/выключение заливки полигонов для их визуализации.
+"3" — включение/выключение заливки полигонов для их визуализации.
 
 Инструменты редактирования:
 
-Клавиша "F1" — выбор нескольких объектов для группового редактирования.
+"F1" — выбор нескольких объектов для группового редактирования.
 
 "Shift+F1" — очистка выбора.
 
 "Ctrl+F1" — выбор перекрывающихся полигонов под текущим полигоном.
 
-Клавиша "F2" — привязка курсора к ближайшим точкам.
+"F2" — привязка курсора к ближайшим точкам.
 
 "Ctrl+F2" — Режим выбора точки для перетаскивания. (Отмена перетаскивания работает с задержкой, рекомендуется зажать)
 
-Клавиша "F3" — объединение выбранных полигонов в один.
+"F3" — объединение выбранных полигонов в один.
+
+"F4"/"Shift + F4" — добавление точки до/после текущей точки для выбранной провинции.
 
 Система отката и повтора:
 
