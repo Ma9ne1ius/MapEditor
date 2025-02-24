@@ -12,6 +12,22 @@ from PySide6.QtGui import QColor, QPixmap, QPen, QBrush, QPolygon, QPolygonF
 from PySide6.QtCore import Qt, QPointF, QPoint, Signal, QObject, QRectF, QRect, QSize, QVariantAnimation, QAbstractAnimation
 
 
+def data_folder_path_load(file_name:str):
+    data_folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
+
+    path = os.path.join('', file_name)
+    if not data_folder_path:
+        QMessageBox.warning(None, "Внимание", "Папка не выбрана! Будет выбран последний путь.")
+        with open(path, "r", encoding="utf-8") as file:
+            res: str = file.read()
+            res = res.split("\n")[0].strip()
+        data_folder_path = res if res else QMessageBox.warning(None, "Внимание", "...")
+        if not res:
+            return []
+    else:
+        with open(path, "w+", encoding="utf-8") as file:
+            file.write(data_folder_path)
+    return data_folder_path
 
 class DataManager:
     """Класс для работы с файлами."""
@@ -21,17 +37,23 @@ class DataManager:
         self.scene = scene
         self.pixoffset = 1
         
-        tiles = DataManager.load_background(self.pixoffset)
-        for tile in tiles:
-            scene.addItem(tile)
+        data_folder = data_folder_path_load("lastprov.txt")
+        background_folder = data_folder_path_load("lastback.txt")
+        self.tiles = DataManager.load_background(background_folder, self.pixoffset)
+        self.data = DataManager.import_data(data_folder,self.pixoffset)
 
-        data = DataManager.import_data(self.pixoffset)
-        provinces =data [0] if data else []
-        for province in provinces:
-            # prov:QGraphicsPolygonItem = province
-            # prov = prov.topLevelItem()
-            scene.addItem(province)
+        # for tile in self.tiles:
+        #     scene.addItem(tile)
+        list(map(lambda tile: scene.addItem(tile), self.tiles))
+        provinces = self.data [0] if self.data else []
+        # for province in province:
+        #     scene.addItem(province)
+        list(map(lambda province: scene.addItem(province), provinces))
             
+    
+    
+    
+
     @staticmethod
     def preprocess_json(content):
         """Обработка JSON для устранения ошибок в формате."""
@@ -112,7 +134,7 @@ class DataManager:
             return res
     
     @staticmethod
-    def import_data(pixoffset:int):
+    def import_data(folder_path:str, pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
         
         # with open("dist/fordev.txt", "r", encoding="utf-8") as f:
@@ -120,25 +142,11 @@ class DataManager:
         #     res = res.split("\n")[1].strip()
         # folder_path = res
         
-        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с JSON-файлами провинций")
-
-        path = os.path.join('', "lastprov.txt")
-        if not folder_path:
-            QMessageBox.warning(None, "Внимание", "Папка не выбрана! Будет выбран последний путь.")
-            with open(path, "r", encoding="utf-8") as file:
-                res: str = file.read()
-                res = res.split("\n")[0].strip()
-            folder_path = res if res else QMessageBox.warning(None, "Внимание", "...")
-            if not res:
-                return []
-        else:
-            # if not (folder_path in file.read()) else None
-            with open(path, "w+", encoding="utf-8") as file:
-                file.write(folder_path)
+        data_folder_path = folder_path
+                
         try:
-            res = DataManager.load_data_from_folder(folder_path, pixoffset)
+            res = DataManager.load_data_from_folder(data_folder_path, pixoffset)
             return res
-            
         except ValueError as e:
             QMessageBox.warning(None, "Ошибка", str(e))
         except FileNotFoundError as e:
@@ -149,7 +157,7 @@ class DataManager:
 
     # @tpe(15) 
     @staticmethod
-    def load_background(pixoffset: int):
+    def load_background(folder_path:str, pixoffset: int):
         """Обработчик загрузки фона."""
         
         # with open("dist/fordev.txt", "r", encoding="utf-8") as f:
@@ -157,21 +165,7 @@ class DataManager:
         #     res = res.split("\n")[0].strip()
         # folder_path = res
         
-        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку с PNG-файлами фона")
-        
-        path = os.path.join('', "lastback.txt")
-        if not folder_path:
-            QMessageBox.warning(None, "Внимание", "Папка не выбрана! Будет выбран последний путь.")
-            with open(path, "r", encoding="utf-8") as file:
-                res: str = file.read()
-                res = res.split("\n")[0].strip()
-            folder_path = res if res else QMessageBox.warning(None, "Внимание", "...")
-            if not res:
-                return []
-        else:
-            with open(path, "w+", encoding="utf-8") as file:
-                file.write(folder_path + '\n') 
-        
+                
         """Загружает PNG-файлы из папки в словарь с координатами."""
         pngs = [f for f in os.listdir(folder_path) if f.endswith(".png")]
 
@@ -316,7 +310,7 @@ class MEPolygonF(QPolygonF):
         self.clear()
         self.append(points)
 
-    def indexOf(self, point: QPointF | QPoint, isStrictly: bool = True) -> int:
+    def index(self, point: QPointF | QPoint, isStrictly: bool = True) -> int:
         points:list = self.toList()
         return points.index(point) if (point in points) & isStrictly else points.index(min(list(map(lambda point1: point1 - point, points)), key=lambda point: point.manhattanLength()))
     # min([QPoint(r.randint(0, 100), r.randint(0, 100)) for i in range(100)], key=lambda point: point.x() + point.y())
@@ -374,7 +368,7 @@ class MEPolygon(QPolygon):
         points.insert(index, point)
         self = MEPolygon(points)
 
-    def indexOf(self, point: QPoint) -> int:
+    def index(self, point: QPoint) -> int:
         points:list = self.toList()
         return points.index(point)
     
@@ -464,20 +458,20 @@ class MEPolygonItem(QGraphicsPolygonItem):
         else:
             raise TypeError("Invalid argument type for MEPolygonItem")
     
-    def moveTo(self, *next_pos:QPoint|QPointF|float|int, duration:int=250):
-        if len(next_pos) == 1 and isinstance(next_pos[0], QPoint|QPointF):
-            next_pos = next_pos[0]
-        elif len(next_pos) == 2 and all(isinstance(i, int|float) for i in next_pos):
-            next_pos = MEPointF(*next_pos)
-        else:
-            raise TypeError("Invalid argument type for moveTo")
+    # def moveTo(self, *next_pos:QPoint|QPointF|float|int, duration:int=250):
+    #     if len(next_pos) == 1 and isinstance(next_pos[0], QPoint|QPointF):
+    #         next_pos = next_pos[0]
+    #     elif len(next_pos) == 2 and all(isinstance(i, int|float) for i in next_pos):
+    #         next_pos = MEPointF(*next_pos)
+    #     else:
+    #         raise TypeError("Invalid argument type for moveTo")
             
-        self._animation = QVariantAnimation(
-            duration = duration,
-            valueChanged = self.setPos,
-            startValue = self.pos(),
-            endValue = next_pos)
-        self._animation.start(QAbstractAnimation.DeleteWhenStopped)
+    #     self._animation = QVariantAnimation(
+    #         duration = duration,
+    #         valueChanged = self.setPos,
+    #         startValue = self.pos(),
+    #         endValue = next_pos)
+    #     self._animation.start(QAbstractAnimation.DeleteWhenStopped)
         
     def __repr__(self):
         return f"MEPolygonItem({self.Polygon.__repr__()})"

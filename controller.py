@@ -22,14 +22,14 @@ class InteractiveGraphicsView(QGraphicsView):
         self.sceneOffset = offset
         self.sceneSize = size
         self.undoStack = QUndoStack(self)
-        self.provence_level = list(filter(lambda item: isinstance(item, ProvenceItem), self.scene().items()))[0].zValue() if self.scene().items() else None
+        self.provence_level = list(filter(lambda item: isinstance(item, ProvenceItem), self.scene().items()))[0].zValue() if self.scene().items() else 0
 
         self.rubberBand: QRubberBand = QRubberBand(QRubberBand.Rectangle, self)
         self.origin = QPoint()
 
         self.cursorMove.connect(self.updateCircle)
         self.timer = QTimer(self)
-        self.timer.setInterval(20)
+        self.timer.setInterval(15)
         self.timer.timeout.connect(self.checkCursor)
         self.timer.start()
         self.current_scale = self.transform().scale(1, 1).mapRect(QRectF(0, 0, 1, 1)).width()
@@ -163,7 +163,7 @@ class InteractiveGraphicsView(QGraphicsView):
             self.current_point_item.setVisible(False)
 
     def unitingProvinces(self):
-        selectedItems = self.scene().selectedItems()
+        selectedItems = list(filter(lambda item: isinstance(item, ProvenceItem), self.scene().selectedItems()))
 
         if len(selectedItems) < 2:
             return
@@ -181,7 +181,7 @@ class InteractiveGraphicsView(QGraphicsView):
         unified_polygon = unary_union(shapely_polygons)
 
         if isinstance(unified_polygon, MultiPolygon):
-            unified_polygon = max(unified_polygon, key=lambda p: p.area)
+            unified_polygon = max(unified_polygon, shapely_polygons, key=lambda p: p.area)
 
         new_polygon_qt = from_shapely_polygon(unified_polygon)
         new_provence = ProvenceItem(new_polygon_qt)
@@ -270,13 +270,19 @@ class InteractiveGraphicsView(QGraphicsView):
         self.updateCircle(self._cursorPos)
         
     def add_polygon_point_before_current(self):
-        # self.undoStack.push(AddPointBeforeCommand(self, self.gen_new_point(self.current_point_item_pos), list(filter(lambda data: data['item'] in self.scene().selectedItems(), self.dataItems)))) if self.dataItems else None
-        ...
+        list1 = list(filter(lambda data: data['item'] in self.scene().selectedItems(), self.dataItems)) if self.dataItems else None
+        self.undoStack.push(AddPointBeforeCommand(self, self.gen_new_point(self.current_point_item_pos), list1)) if list1 else None
+    
     def add_polygon_point_after_current(self):
-        # self.undoStack.push(AddPointAfterCommand(self, self.gen_new_point(self.current_point_item_pos), list(filter(lambda data: data['item'] in self.scene().selectedItems(), self.dataItems)))) if self.dataItems else None
-        ...
+        list1 = list(filter(lambda data: data['item'] in self.scene().selectedItems(), self.dataItems)) if self.dataItems else None
+        self.undoStack.push(AddPointAfterCommand(self, self.gen_new_point(self.current_point_item_pos), list1)) if list1 else None
+    
     def merge_current_and_closest_points(self):
-        ...
+        # for data in self.dataItems:
+        #     polygon = MEPolygonF(data['original_polygon'])
+        #     for i in data['indexes']:
+                
+                ...
 
     
     def gen_new_point(self, point:QPointF=None):
@@ -358,6 +364,7 @@ class InteractiveGraphicsView(QGraphicsView):
         horizontal_bar = self.horizontalScrollBar()
         vertical_bar.setValue(vertical_bar.value() + dy)
         horizontal_bar.setValue(horizontal_bar.value() + dx)
+        # self.undoStack.undo() if self.isConnectCircleVisible & self.undoStack else None
 
 
     def mousePressEvent(self, event):
