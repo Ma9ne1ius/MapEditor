@@ -18,6 +18,7 @@ def data_folder_path_load(file_name:str):
     path = os.path.join('', file_name)
     if not data_folder_path:
         QMessageBox.warning(None, "Внимание", "Папка не выбрана! Будет выбран последний путь.")
+        
         with open(path, "r", encoding="utf-8") as file:
             res: str = file.read()
             res = res.split("\n")[0].strip()

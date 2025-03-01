@@ -1,7 +1,7 @@
 import math
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
-from data_manager import DataManager, MEPointF, ProvenceItem, MEPolygonF, MEPolygonItem
+from data_manager import DataManager, MEPointF, MEPolygonF, MEPolygonItem, MERect, ProvenceItem
 import random as r
 from command_manager import (AddCurrentPolygonCommand, AddPointAfterCommand, AddPointBeforeCommand,
     AddPointCommand, AddPolygonCommand, DeletePolygonCommand, DeletePolygonPointCommand,
@@ -181,7 +181,7 @@ class InteractiveGraphicsView(QGraphicsView):
         unified_polygon = unary_union(shapely_polygons)
 
         if isinstance(unified_polygon, MultiPolygon):
-            unified_polygon = max(unified_polygon, shapely_polygons, key=lambda p: p.area)
+            unified_polygon = max(unified_polygon, max(shapely_polygons, key=lambda p: p.area), key=lambda p: p.area)
 
         new_polygon_qt = from_shapely_polygon(unified_polygon)
         new_provence = ProvenceItem(new_polygon_qt)
@@ -230,7 +230,17 @@ class InteractiveGraphicsView(QGraphicsView):
             item.setVisible(not self.isBackVisible)
         self.repaint()
         self.isBackVisible = not self.isBackVisible
-
+    
+    def provincial_junctions_normalize(self):
+        for provence in list(filter(lambda item: isinstance(item, ProvenceItem),self.scene().selectedItems())):
+            for point in provence.Polygon:
+                self.set_current_point(point)
+                offset = QPointF(1.0,1.0)
+                move = MovePointCommand(self, self.current_point_item_old_pos, point+offset, self.dataItems)
+                move.redo()
+                move = MovePointCommand(self, self.current_point_item_old_pos, point, self.dataItems)
+                move.redo()
+    
     def selection_from_current_polygon(self):
         self.selectPolygon(self.current_province_polygon, self.isSaveSelecting)
         self.current_province_polygon.clear()
@@ -320,6 +330,7 @@ class InteractiveGraphicsView(QGraphicsView):
             Qt.Key_1: self._toggle_background_visible,
             Qt.Key_2: self._toggle_polygon_edge_visible,
             Qt.Key_3: self._toggle_polygon_body_visible,
+            Qt.Key_4: self.provincial_junctions_normalize,
             Qt.Key_Delete: self._toggle_delete,
             Qt.Key_Backspace: self.popPoint,
             Qt.Key_Space: lambda: self.add_province_polygon(self.current_province),
@@ -345,7 +356,6 @@ class InteractiveGraphicsView(QGraphicsView):
         handle() if isinstance(handle, typing.Callable) else super().mouseMoveEvent(event)
         
         self.old_x = x
-        self.old_y = y
 
     def handle_move_right_button(self):
         self.setCursor(Qt.CursorShape.ClosedHandCursor)
@@ -418,21 +428,24 @@ class InteractiveGraphicsView(QGraphicsView):
         pos = self.mapToScene(position.toPoint())
         item = self.scene().itemAt(pos, self.transform())
         if item and self.closest_point:
-            self.current_point_item_old_pos = self.current_point_item_pos = MEPointF(self.closest_point)
-            self.current_point_item.setPos(self.current_point_item_pos)
-            current_point_colliding = list(filter(lambda item: isinstance(item, ProvenceItem), self.current_point_item.collidingItems()))
-            self.dataItems:list[dict[str, typing.Any]] = []
-            for item in current_point_colliding:
-                polygon = item.Polygon
-                indexes = [i for i, p in enumerate(polygon) if ((p == self.current_point_item_pos)) | ((p - self.current_point_item_pos).manhattanLength() <= self.current_point_item_radius)]
-                if indexes:
-                    self.dataItems.append({
+            self.set_current_point(MEPointF(self.closest_point))
+        self.updateCircle(self.mapToScene(position.toPoint()))
+
+    def set_current_point(self, position: QPoint|QPointF):
+        self.current_point_item_old_pos = self.current_point_item_pos = position
+        self.current_point_item.setPos(self.current_point_item_pos)
+        current_point_colliding = list(filter(lambda item: isinstance(item, ProvenceItem), self.current_point_item.collidingItems()))
+        self.dataItems:list[dict[str, typing.Any]] = []
+        for item in current_point_colliding:
+            polygon = item.Polygon
+            indexes = [i for i, p in enumerate(polygon) if ((p == self.current_point_item_pos)) | ((p - self.current_point_item_pos).manhattanLength() <= self.current_point_item_radius)]
+            if indexes:
+                self.dataItems.append({
                                 'item': item,
                                 'indexes': indexes,
                                 'original_polygon': MEPolygonF(polygon)
                             })
-            self.current_point_item.setSelected(True)
-        self.updateCircle(self.mapToScene(position.toPoint()))
+        self.current_point_item.setSelected(True)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
