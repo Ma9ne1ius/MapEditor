@@ -26,7 +26,7 @@ class AddPointCommand(QUndoCommand):
 
     def undo(self):
         if not self.view.current_province_polygon.isEmpty():
-            self.view.current_province_polygon.remove(self.view.current_province_polygon.indexOf(self.point))
+            self.view.current_province_polygon.remove(self.view.current_province_polygon.index(self.point))
             self.view.current_province.setPolygon(self.view.current_province_polygon)
         self.view.repaint()
 
@@ -39,7 +39,7 @@ class PopPointCommand(QUndoCommand):
     def redo(self):
         if not self.view.current_province_polygon.isEmpty():
             self.last_point = self.view.current_province_polygon.last()
-            self.view.current_province_polygon.remove(self.view.current_province_polygon.indexOf(self.last_point))
+            self.view.current_province_polygon.remove(self.view.current_province_polygon.index(self.last_point))
             self.view.current_province.setPolygon(self.view.current_province_polygon)
         self.view.repaint()
 
@@ -54,7 +54,7 @@ class AddCurrentPolygonCommand(QUndoCommand):
         super().__init__()
         self.view = view
         self.provence_item:ProvenceItem = None
-        self.current_province_polygon = self.view.current_province_polygon
+        self.current_province_polygon = MEPolygonF(self.view.current_province_polygon)
 
     def redo(self):
         self.provence_item = ProvenceItem(self.view.current_province_polygon)
@@ -63,6 +63,7 @@ class AddCurrentPolygonCommand(QUndoCommand):
         self.provence_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.view.scene().addItem(self.provence_item)
         self.view.current_province.setPolygon(MEPolygonF())
+        self.view.current_province_polygon.clear()
         self.view.repaint()
 
     def undo(self):
