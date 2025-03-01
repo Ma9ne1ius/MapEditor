@@ -31,5 +31,4 @@ if __name__ == "__main__":
     app.setApplicationName("MapEditor")
     window = MainWindow()
     window.showMaximized()
-
-    sys.exit(app.exec())
+    sys.exit(app.exec_())

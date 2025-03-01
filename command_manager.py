@@ -1,16 +1,15 @@
 from PySide6.QtWidgets import (
     QGraphicsItem, QGraphicsView
 )
-from PySide6.QtGui import QPainter, QColor, QPixmap, QPen, QPolygonF, QUndoCommand, QUndoStack
+from PySide6.QtGui import QPainter, QColor, QPixmap, QPen, QPolygonF, QUndoCommand
 from PySide6.QtCore import QRectF, QPointF, QPoint, Qt
-from data_manager import MEPointF, MEPolygonF, MEPolygonItem, ProvenceItem
+from data_manager import MEPolygonF, MEPolygonItem, ProvenceItem
 
 import random as r
 import shapely.geometry
 import typing
 
 from data_manager import ProvenceItem, MEPolygonF
-
 
     
 
@@ -27,7 +26,7 @@ class AddPointCommand(QUndoCommand):
 
     def undo(self):
         if not self.view.current_province_polygon.isEmpty():
-            self.view.current_province_polygon.remove(self.view.current_province_polygon.index(self.point))
+            self.view.current_province_polygon.remove(self.view.current_province_polygon.indexOf(self.point))
             self.view.current_province.setPolygon(self.view.current_province_polygon)
         self.view.repaint()
 
@@ -40,7 +39,7 @@ class PopPointCommand(QUndoCommand):
     def redo(self):
         if not self.view.current_province_polygon.isEmpty():
             self.last_point = self.view.current_province_polygon.last()
-            self.view.current_province_polygon.remove(self.view.current_province_polygon.index(self.last_point))
+            self.view.current_province_polygon.remove(self.view.current_province_polygon.indexOf(self.last_point))
             self.view.current_province.setPolygon(self.view.current_province_polygon)
         self.view.repaint()
 
@@ -55,20 +54,22 @@ class AddCurrentPolygonCommand(QUndoCommand):
         super().__init__()
         self.view = view
         self.provence_item:ProvenceItem = None
-        self.current_province_polygon = MEPolygonF(self.view.current_province_polygon)
+        self.current_province_polygon = self.view.current_province_polygon
 
     def redo(self):
-        self.provence_item = ProvenceItem(self.current_province_polygon)
+        self.provence_item = ProvenceItem(self.view.current_province_polygon)
+        self.provence_item.setPen(QColor(255, 0, 0))
+        self.provence_item.setBrush(self.view.QRColor())
+        self.provence_item.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.view.scene().addItem(self.provence_item)
         self.view.current_province.setPolygon(MEPolygonF())
-        self.view.current_province_polygon.clear()
         self.view.repaint()
 
     def undo(self):
         if self.provence_item:
             self.view.scene().removeItem(self.provence_item)
             self.view.current_province_polygon = MEPolygonF(self.current_province_polygon)
-            self.view.current_province.setPolygon(self.current_province_polygon)
+            self.view.current_province.setPolygon(self.view.current_province_polygon)
         self.view.repaint()
 
 class UnitePolygonsCommand(QUndoCommand):
@@ -129,7 +130,7 @@ class MovePointCommand(QUndoCommand):
     def __init__(self, view:QGraphicsView, old_point:QPointF | QPoint, new_point:QPointF | QPoint, dataItems:list[dict[str, typing.Any]]):
         super().__init__()
         self.view = view
-        self.old_point = MEPointF(old_point)
+        self.old_point = QPointF(old_point)
         self.new_point = new_point
         self.dataItems = dataItems
         
@@ -205,27 +206,26 @@ class AddPointBeforeCommand(QUndoCommand):
         super().__init__()
         self.view = view
         self.point = point
-        self.data = dataItems[0]
-        self.new_polygon = MEPolygonF()
+        self.dataItems = dataItems
     
     def redo(self):
+        for data in self.dataItems:
             new_point = self.point 
-            polygon = MEPolygonF(self.data['original_polygon'])
-            indexes:list[int]= self.data['indexes']
+            polygon = MEPolygonF(data['original_polygon'])
+            indexes:list[int]  = data['indexes']
+            indexes1 = []
             for i in indexes:
                 polygon.insert(i, new_point)
-                # for point in polygon:
-                #     if point is self.view.current_point_item.pos() or ((point-self.view.current_point_item.pos().manhattanLength() <= self.view.current_point_radius)):
-                #         polygon.index(point)
-            self.data['item'].setPolygon(polygon)
-            self.data['item'].update()
+                indexes1.append(i)
+            indexes.clear()
+            indexes.extend(indexes1)
+            data['item'].setPolygon(polygon)
+            data['item'].update()
     
     def undo(self):
-            item = self.data['item']
-            polygon = MEPolygonF(self.data['original_polygon'])
-            # indexes:list[int] = self.data['indexes']
-            # for i in indexes:
-            #     polygon.remove(i-1)
+        for data in self.dataItems:
+            item = data['item']
+            polygon = MEPolygonF(data['original_polygon'])
             item.setPolygon(polygon)
             item.update()
 
@@ -237,33 +237,25 @@ class AddPointAfterCommand(QUndoCommand):
         super().__init__()
         self.view = view
         self.point = point
-        self.data = dataItems[0] if dataItems else {}
-    
-    def redo(self):
-            new_point = self.point 
-            polygon = MEPolygonF(self.data['original_polygon'])
-            indexes:list[int] = self.data['indexes']
-            for i in indexes:
-                polygon.insert(i+1, new_point)
-            self.data['item'].setPolygon(polygon)
-            self.data['item'].update()
-    
-    def undo(self):
-            item = self.data['item']
-            polygon = MEPolygonF(self.data['original_polygon'])
-            # indexes:list[int] = self.data['indexes']
-            # for i in indexes:
-            #     polygon.remove(i)
-            item.setPolygon(polygon)
-            item.update()
-
-class MergePointsCommand(QUndoCommand):
-    def __init__(self, view:QGraphicsView, point:QPointF, dataItems:list[dict[str, MEPolygonF|int|ProvenceItem]]):
-        super().__init__()
-        self.view = view
-        self.point = point
         self.dataItems = dataItems
     
     def redo(self):
         for data in self.dataItems:
-            ...
+            new_point = self.point 
+            polygon = MEPolygonF(data['original_polygon'])
+            indexes:list[int] = data['indexes']
+            indexes1 = []
+            for i in indexes:
+                polygon.insert(i+1, new_point)
+                indexes1.append(i+1)
+            indexes.clear()
+            indexes.extend(indexes1)
+            data['item'].setPolygon(polygon)
+            data['item'].update()
+    
+    def undo(self):
+        for data in self.dataItems:
+            item = data['item']
+            polygon = MEPolygonF(data['original_polygon'])
+            item.setPolygon(polygon)
+            item.update()

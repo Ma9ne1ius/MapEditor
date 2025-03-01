@@ -22,14 +22,14 @@ class InteractiveGraphicsView(QGraphicsView):
         self.sceneOffset = offset
         self.sceneSize = size
         self.undoStack = QUndoStack(self)
-        self.provence_level = list(filter(lambda item: isinstance(item, ProvenceItem), self.scene().items()))[0].zValue() if self.scene().items() else 0
+        self.provence_level = list(filter(lambda item: isinstance(item, ProvenceItem), self.scene().items()))[0].zValue()
 
         self.rubberBand: QRubberBand = QRubberBand(QRubberBand.Rectangle, self)
         self.origin = QPoint()
 
         self.cursorMove.connect(self.updateCircle)
         self.timer = QTimer(self)
-        self.timer.setInterval(15)
+        self.timer.setInterval(20)
         self.timer.timeout.connect(self.checkCursor)
         self.timer.start()
         self.current_scale = self.transform().scale(1, 1).mapRect(QRectF(0, 0, 1, 1)).width()
@@ -78,7 +78,7 @@ class InteractiveGraphicsView(QGraphicsView):
         self.scene().addItem(self.current_point_line)
 
         self.current_point_item = MEPolygonItem()
-        self.current_point_item_pos = MEPointF()
+        self.current_point_item_pos = QPointF()
         self.current_point_item.setZValue(self.provence_level + 1)
         self.current_point_item_radius = 2
         self.current_point_item_sides = 9
@@ -287,11 +287,7 @@ class InteractiveGraphicsView(QGraphicsView):
         self.undoStack.push(AddPointAfterCommand(self, self.gen_new_point(self.current_point_item_pos), list1)) if list1 else None
     
     def merge_current_and_closest_points(self):
-        # for data in self.dataItems:
-        #     polygon = MEPolygonF(data['original_polygon'])
-        #     for i in data['indexes']:
-                
-                ...
+        ...
 
     
     def gen_new_point(self, point:QPointF=None):
@@ -356,6 +352,7 @@ class InteractiveGraphicsView(QGraphicsView):
         handle() if isinstance(handle, typing.Callable) else super().mouseMoveEvent(event)
         
         self.old_x = x
+        self.old_y = y
 
     def handle_move_right_button(self):
         self.setCursor(Qt.CursorShape.ClosedHandCursor)
@@ -373,7 +370,6 @@ class InteractiveGraphicsView(QGraphicsView):
         horizontal_bar = self.horizontalScrollBar()
         vertical_bar.setValue(vertical_bar.value() + dy)
         horizontal_bar.setValue(horizontal_bar.value() + dx)
-        # self.undoStack.undo() if self.isConnectCircleVisible & self.undoStack else None
 
 
     def mousePressEvent(self, event):
@@ -386,7 +382,7 @@ class InteractiveGraphicsView(QGraphicsView):
             Qt.MiddleButton: ...
         }.get(event.button(), None)
         
-        handle() if isinstance(handle, typing.Callable) else None
+        handle() if isinstance(handle, typing.Callable) else super().mousePressEvent(event)
 
     def handle_press_right_button(self, event):
         handle = {

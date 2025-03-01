@@ -141,7 +141,7 @@ class DataManager:
     def import_data(folder_path:str, pixoffset:int):
         """Обработчик загрузки данных с использованием DataLoader."""
         
-        # with open("dist/fordev.txt", "r", encoding="utf-8") as f:
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
         #     res: str = f.read()
         #     res = res.split("\n")[1].strip()
         # folder_path = res
@@ -164,7 +164,7 @@ class DataManager:
     def load_background(folder_path:str, pixoffset: int):
         """Обработчик загрузки фона."""
         
-        # with open("dist/fordev.txt", "r", encoding="utf-8") as f:
+        # with open("fordev.txt", "r", encoding="utf-8") as f:
         #     res: str = f.read()
         #     res = res.split("\n")[0].strip()
         # folder_path = res
